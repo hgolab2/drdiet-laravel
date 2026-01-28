@@ -1,67 +1,51 @@
 # syntax=docker/dockerfile:1
-
-FROM php:8.2-fpm-alpine
+FROM php:8.2-fpm-bookworm
 
 # System deps
-RUN apk add --no-cache \
-    bash \
-    curl \
-    git \
-    icu-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl unzip \
+    libicu-dev \
     libzip-dev \
-    oniguruma-dev \
-    tzdata \
-    $PHPIZE_DEPS
+    libpng-dev libjpeg62-turbo-dev libfreetype6-dev libwebp-dev \
+    libonig-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-
-# Base extensions
-RUN docker-php-ext-install -j$(nproc) \
-    pdo_mysql mbstring zip intl opcache pcntl
-
-# XML stack (برای swagger-php)
-RUN docker-php-ext-install -j$(nproc) dom xml simplexml xmlreader xmlwriter
-
-# GD (برای phpspreadsheet / maatwebsite/excel)
+# PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
- && docker-php-ext-install -j$(nproc) gd
+ && docker-php-ext-install -j$(nproc) \
+    pdo_mysql \
+    mbstring \
+    zip \
+    intl \
+    gd \
+    pcntl \
+    opcache
 
-# Install Composer
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy composer files first (better layer cache)
+# Copy composer files first (cache-friendly)
 COPY composer.json composer.lock ./
 
-# Install deps (no-dev by default; change with build arg)
 ARG APP_ENV=production
+
+# CI-friendly: no scripts during build (artisan needs env sometimes)
 RUN if [ "$APP_ENV" = "production" ]; then \
-      composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader; \
+      composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts; \
     else \
-      composer install --no-interaction --prefer-dist; \
+      composer install --no-interaction --prefer-dist --no-scripts; \
     fi
 
-# Copy application
+# Copy app
 COPY . .
 
-# Permissions (Alpine: www-data exists)
+# Permissions
 RUN mkdir -p storage bootstrap/cache \
  && chown -R www-data:www-data storage bootstrap/cache \
  && chmod -R 775 storage bootstrap/cache
 
-# OPcache recommended settings
-RUN { \
-  echo "opcache.enable=1"; \
-  echo "opcache.enable_cli=0"; \
-  echo "opcache.memory_consumption=128"; \
-  echo "opcache.interned_strings_buffer=16"; \
-  echo "opcache.max_accelerated_files=20000"; \
-  echo "opcache.validate_timestamps=0"; \
-  echo "opcache.revalidate_freq=0"; \
-} > /usr/local/etc/php/conf.d/opcache-recommended.ini
-
 USER www-data
-
 EXPOSE 9000
-
 CMD ["php-fpm"]
