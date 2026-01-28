@@ -13,13 +13,18 @@ RUN apk add --no-cache \
     tzdata \
     $PHPIZE_DEPS
 
-# PHP extensions needed for Laravel + Excel + ICU
+# ---- PHP extensions (Laravel + Swagger + Excel + Queue) ----
+# xml => dom/simplexml/xmlwriter/xmlreader
 RUN docker-php-ext-configure intl \
+ && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j$(nproc) \
     pdo_mysql \
     mbstring \
     zip \
     intl \
+    xml \
+    gd \
+    pcntl \
     opcache
 
 # Install Composer
