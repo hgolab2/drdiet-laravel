@@ -13,19 +13,16 @@ RUN apk add --no-cache \
     tzdata \
     $PHPIZE_DEPS
 
-# ---- PHP extensions (Laravel + Swagger + Excel + Queue) ----
-# xml => dom/simplexml/xmlwriter/xmlreader
-
-RUN docker-php-ext-install -j$(nproc) \
-    pdo_mysql mbstring zip opcache pcntl
-
-RUN docker-php-ext-install -j$(nproc) xml
-
-RUN docker-php-ext-configure intl \
- && docker-php-ext-install -j$(nproc) intl
-
+# PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
- && docker-php-ext-install -j$(nproc) gd
+ && docker-php-ext-install -j$(nproc) \
+    pdo_mysql \
+    mbstring \
+    zip \
+    intl \
+    gd \
+    pcntl \
+    opcache
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
