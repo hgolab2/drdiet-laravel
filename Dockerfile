@@ -15,17 +15,17 @@ RUN apk add --no-cache \
 
 # ---- PHP extensions (Laravel + Swagger + Excel + Queue) ----
 # xml => dom/simplexml/xmlwriter/xmlreader
+RUN docker-php-ext-install -j$(nproc) \
+    pdo_mysql mbstring zip opcache pcntl
+
+RUN docker-php-ext-install -j$(nproc) \
+    dom simplexml xml xmlreader xmlwriter
+
 RUN docker-php-ext-configure intl \
- && docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install -j$(nproc) \
-    pdo_mysql \
-    mbstring \
-    zip \
-    intl \
-    xml \
-    gd \
-    pcntl \
-    opcache
+ && docker-php-ext-install -j$(nproc) intl
+
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+ && docker-php-ext-install -j$(nproc) gd
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
