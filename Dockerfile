@@ -13,16 +13,17 @@ RUN apk add --no-cache \
     tzdata \
     $PHPIZE_DEPS
 
-# PHP extensions
+
+# 1) Extensions that rarely fail
+RUN docker-php-ext-install -j$(nproc) \
+    pdo_mysql mbstring zip opcache pcntl
+
+# 2) intl (ICU)
+RUN docker-php-ext-install -j$(nproc) intl
+
+# 3) GD (most common failure point) - do it alone
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
- && docker-php-ext-install -j$(nproc) \
-    pdo_mysql \
-    mbstring \
-    zip \
-    intl \
-    gd \
-    pcntl \
-    opcache
+ && docker-php-ext-install -j$(nproc) gd
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
