@@ -1,0 +1,64 @@
+
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: 200;
+    src: url('../fonts/modam-web/woff2/ModamWeb-ExtraLight.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-ExtraLight.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: 300;
+    src: url('../fonts/modam-web/woff2/ModamWeb-Light.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-Light.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: normal;
+    src: url('../fonts/modam-web/woff2/ModamWeb-Regular.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-Regular.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: 500;
+    src: url('../fonts/modam-web/woff2/ModamWeb-Medium.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-Medium.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: 600;
+    src: url('../fonts/modam-web/woff2/ModamWeb-SemiBold.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-SemiBold.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: bold;
+    src: url('../fonts/modam-web/woff2/ModamWeb-Bold.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-Bold.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: 800;
+    src: url('../fonts/modam-web/woff2/ModamWeb-ExtraBold.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-ExtraBold.woff') format('woff');  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}
+
+@font-face {
+    font-family: ModamWeb;
+    font-style: normal;
+    font-weight: 900;
+    src: url('../fonts/modam-web/woff2/ModamWeb-Black.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('../fonts/modam-web/woff/ModamWeb-Black.woff') format('woff')  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+}

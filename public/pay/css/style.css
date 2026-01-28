@@ -1,0 +1,397 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: ModamWeb, serif
+}
+
+body {
+    overflow: auto;
+    padding: 10px 0;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.text-half-dark {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.text-light-gray {
+    color: #999999;
+}
+
+.text-gray {
+    color: #5A5A5B;
+}
+
+.text-brown {
+    color: #A2845E;
+}
+
+.text-white {
+    color: white;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.mb-auto {
+    margin-bottom: auto;
+}
+
+.mr-10 {
+    margin-right: 10px;
+}
+
+.payment-form {
+    width: 376px;
+    background-color: #F4F4F4;
+    border-radius: 20px;
+}
+
+.payment-form .header {
+    /*background-color: #2D2E30;*/
+    background-image: url("../images/patterns/blue.png");
+    height: 225px;
+    border-radius: 20px 20px 0 0;
+    background-size: cover;
+}
+
+body.orange .header {
+    background-image: url("../images/patterns/orange.png");
+}
+
+.payment-form .header .logo {
+    width: 125px;
+    height: 111px;
+}
+
+.payment-form .header .product-card {
+    background-color: white;
+    position: absolute;
+    gap: 20px;
+    bottom: -48px;
+    border-radius: 20px;
+    padding: 13px;
+    box-shadow: 0 25px 50px -12px rgba(8, 40, 92, 0.12);
+}
+
+.payment-form .header .product-card .icon {
+    flex-shrink: 0;
+    background-color: #1A96FF;
+    border-radius: 15px;
+    width: 62px;
+    height: 62px;
+    background-image: url("../images/icons/basket.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 50% 62%;
+}
+
+body.orange .header .product-card .icon {
+    background-color: #F7941D;
+    background-image: url("../images/icons/backet-orange.png");
+}
+
+.payment-form .header .product-card .content {
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    border-radius: 20px;
+}
+
+.payment-form .header .product-card .title {
+}
+
+.payment-form .header .product-card .price {
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.payment-form .header .product-card .date {
+    font-size: 14px;
+    margin-top: 6px;
+}
+
+.payment-form .pay-section {
+    margin-top: 94px;
+    padding: 0 47px;
+}
+
+.options {
+    flex-direction: column;
+    list-style: none;
+    gap: 20px;
+    padding-bottom: 30px;
+}
+
+.options li {
+    gap: 14px;
+    padding: 0 50px;
+    align-items: center;
+
+}
+
+.options li .content .title,
+.options li .content .description {
+    font-size: 13px;
+}
+
+.options li .content .title {
+    font-weight: 600;
+}
+
+.options li .content .description {
+    font-weight: 400;
+}
+
+.protection-link {
+    position: relative;
+    width: 360px;
+}
+
+.protection-link input {
+    display: none;
+}
+
+.protection-link .description {
+    position: relative;
+}
+
+.protection-link .description {
+    display: none;
+    gap: 20px;
+    font-size: 14px;
+    padding: 10px 0;
+}
+
+.protection-link .chevron {
+    margin-right: 10px;
+}
+
+.protection-link input:checked ~ label {
+    margin-top: 20px;
+}
+
+.protection-link input:checked ~ .description {
+    display: flex;
+}
+
+.protection-link a {
+    margin-top: 20px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.protection-link input:checked ~ label .chevron{
+    transform: rotate(180deg);
+}
+
+.btn {
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    color: white;
+}
+
+.btn-red {
+    background-color: #EF3E42;
+}
+
+.btn-red-outline {
+    color: #EF3E42;
+    border: 1px solid #EF3E42;
+}
+
+.btn-blue {
+    background-color: #1A96FF;
+}
+
+.form-field {
+    background-color: white;
+    border-radius: 6px;
+    padding: 10px 16px;
+}
+
+.form-field input {
+    outline: none;
+    border: none;
+    width: 100%;
+}
+
+.form-field input::placeholder {
+    color: #9F9F9F;
+    opacity: 1; /* Firefox */
+    font-size: 16px;
+}
+
+.form-field input::-ms-input-placeholder {
+    color: #9F9F9F;
+    font-size: 16px;
+}
+
+.not-valid{
+    display: flex;
+    width: 100%;
+    margin: 10px 0;
+}
+
+.not-valid:before {
+    content: attr(data-error);
+    color: red;
+}
+
+
+#countries__list {
+    padding-left: 0;
+}
+
+#countries__list img, .btn-select img {
+    width: 26px;
+
+}
+
+#countries__list li {
+    list-style: none;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+#countries__list li:hover {
+    background-color: #F4F3F3;
+}
+
+#countries__list li span, .btn-select li span {
+    margin-left: 5px;
+}
+
+.select-box {
+    display: none;
+    width: 210px;
+    max-width: 400px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+    max-height: 200px;
+    overflow: auto;
+    position: absolute;
+    top: calc(100% + 10px);
+    background-color: white;
+    z-index: 10;
+}
+
+.open {
+    display: show !important;
+}
+
+.select-field{
+    width: max-content;
+    margin-right: 10px;
+}
+
+.btn-select {
+    width: 100%;
+    color: black;
+    margin-top: 0;
+    padding: 0 0 0 20px;
+    border: none;
+    position: relative;
+    background-color: transparent;
+}
+
+.btn-select::before{
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 0;
+    top: 50%;
+    transform:translate(0,-50%);
+    background-image: url("../images/icons/chevron-down.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.btn-select span{
+    display: none;
+}
+
+.btn-select li {
+    list-style: none;
+    padding-bottom: 0;
+    display: flex;
+    justify-content: start;
+    gap: 10px;
+}
+
+.btn-select:hover li {
+    margin-left: 0;
+}
+
+.btn-select:focus {
+    outline: none;
+}
+
+.lang-select {
+    position: relative;
+    display: flex;
+    background-color: #EAEAEA;
+    padding: 5px;
+    border-radius: 6px;
+}
+
+/*siyaha theme*/
+.siyaha-theme .options {
+    width: 376px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.siyaha-theme .options li {
+    padding: 0;
+    gap: 8px;
+}
+
+.options li .content .title,
+.options li .content .description {
+    text-align: center;
+}
+
+.options li .content .title {
+    font-size: 10px;
+}
+
+.options li .content .description {
+    font-size: 11px;
+}
+
+.siyaha-theme .payment-form {
+    padding-bottom: 30px;
+}
