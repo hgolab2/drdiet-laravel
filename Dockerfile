@@ -14,8 +14,16 @@ RUN apk add --no-cache \
     $PHPIZE_DEPS
 
 
+# Base extensions
 RUN docker-php-ext-install -j$(nproc) \
     pdo_mysql mbstring zip intl opcache pcntl
+
+# XML stack (برای swagger-php)
+RUN docker-php-ext-install -j$(nproc) dom xml simplexml xmlreader xmlwriter
+
+# GD (برای phpspreadsheet / maatwebsite/excel)
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+ && docker-php-ext-install -j$(nproc) gd
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
