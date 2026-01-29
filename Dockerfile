@@ -17,7 +17,7 @@ RUN docker-php-ext-install -j$(nproc) \
     pdo_mysql mbstring zip intl opcache pcntl
 
 # XML stack (برای swagger-php)
-RUN docker-php-ext-install -j$(nproc) dom xml simplexml xmlreader xmlwriter
+RUN docker-php-ext-install -j$(nproc) dom
 
 # GD (برای phpspreadsheet / maatwebsite/excel)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
