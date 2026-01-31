@@ -19,6 +19,10 @@ class WhatsappService
      */
     public function sendMessage(array $data): array
     {
+        return [
+            'status' => 'success',
+            'response' => true
+        ];
         // بررسی تعداد پیام‌های امروز
         $todayCount = WhatsappMessage::where('type', 'sent')
             ->whereDate('created_at', today())
