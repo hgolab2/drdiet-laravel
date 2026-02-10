@@ -33,8 +33,6 @@ $orderId = date('YmdHis').rand(0,999);
 $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'; //needs filling
 
 ?>
-
-
 <body class="flex flex-center flex-col orange siyaha-theme">
 <div class="payment-form" style="padding-bottom: 0px;">
     <div class="header flex flex-center">
