@@ -85,7 +85,7 @@ $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'
             <img src="/seyaaha/images/bank-muscat.png" alt="bank muscat" width="102">
         </button>
     </form>
-    <img alt="" src="/seyaaha/images/pay.png" style="width: 100%;">
+    <img alt="" src="/seyaaha/images/pay.png" style="width: 90%;">
 </div>
 <ul class="options flex flex-center" dir="rtl">
     <li class="flex flex-col">
