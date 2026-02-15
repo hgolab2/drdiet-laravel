@@ -297,6 +297,7 @@ class DietMealController extends Controller
             ";
             echo env('OPENAI_API_KEY');
             exit;
+
             $openAI = app(OpenAIService::class);
 
             $aiDescription = $openAI->chat([
