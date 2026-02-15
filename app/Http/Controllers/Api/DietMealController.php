@@ -272,37 +272,54 @@ class DietMealController extends Controller
         if (!$meal) {
             return response()->json(['message' => 'یافت نشد.'], 404);
         }
-        $imageUrlAi = null;
-        $itemNames = $meal->items
+        //$imageUrlAi = null;
+        /*$itemNames = $meal->items
             ->pluck('item.name')
             ->filter()
             ->take(3)
             ->values()
-            ->toArray();
+            ->toArray();*/
 
-        $itemsText = implode(' + ', $itemNames);
-        $mealNameAr = $meal->name;
-        /*$imagePrompt = "
-        اسم الوجبة : {$itemsText}
-        وجبة : {$mealNameAr}
-        من وجبات العربية
-        صورة في مقياس ٥١٢*٥١٢
-        حقيقية و مينيمال
-        صورة من زاوية ٤٥ درجة
-        باجراوند ابيض
-        بدون نص
-        ";
 
-        if (!$meal->image) {
-            $imageUrlAi = app(OpenAIService::class)->generateImage($imagePrompt);
-        }*/
+
+        if (empty($meal->description)) {
+            $mealNameAr = $meal->name;
+            $Prompt = "
+            اسم الوجبة : {$mealNameAr}
+
+            المطلوب: تقديم تفاصيل الوجبة لغرض دايت :
+
+            المكونات الرئيسية: اكتب العنوان في سطر، والمكونات في السطر الذي يليه مباشرة (ذكر المكونات فقط دون كميات أو مقادير).
+            طريقة التحضير: اكتب العنوان في سطر، والخطوات في سطر واحد مختصر أو نقاط قصيرة جداً.
+            الفوائد الصحية: اكتب العنوان في سطر، والفوائد في نقاط مختصرة تركز على (الهدف المختار أعلاه).
+            ملاحظة هامة: إذا كانت الوجبة تتكون من عنصر واحد فقط (مثل: التمر أو التفاح)، اكتفِ بذكر \"الفوائد الصحية\" فقط وتجاهل الأقسام الأخرى.
+            التنسيق: اجعل العناوين بارزة واللغة واضحة وبسيطة في اقل من 700 کاراکتر
+            ";
+            $openAI = app(OpenAIService::class);
+
+            $aiDescription = $openAI->chat([
+            [
+                'role' => 'system',
+                'content' => 'You are a professional arabic dietitian and health analyst.'
+            ],
+            [
+                'role' => 'user',
+                'content' => $Prompt
+            ]
+            ]);
+            if ($aiDescription) {
+                $meal->description = $aiDescription;
+                $meal->save();
+            }
+
+        }
 
         $output = [
             'id' => $meal->id,
             'name' => $meal->name,
             'description' => $meal->description,
             'imageUrl' => $meal->image?->url(),
-            'imageUrlAi' => $imageUrlAi,
+            //'imageUrlAi' => $imageUrlAi,
             'mealTypes' => $meal->mealTypes->map(function ($t) {
                 return [
                     'id' => $t->meal_type_id,
