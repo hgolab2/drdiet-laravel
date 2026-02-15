@@ -282,7 +282,7 @@ class DietMealController extends Controller
 
 
 
-        if (empty($meal->description)) {
+        if(empty($meal->description)) {
             $mealNameAr = $meal->name;
             $Prompt = "
             اسم الوجبة : {$mealNameAr}
@@ -295,6 +295,8 @@ class DietMealController extends Controller
             ملاحظة هامة: إذا كانت الوجبة تتكون من عنصر واحد فقط (مثل: التمر أو التفاح)، اكتفِ بذكر \"الفوائد الصحية\" فقط وتجاهل الأقسام الأخرى.
             التنسيق: اجعل العناوين بارزة واللغة واضحة وبسيطة في اقل من 700 کاراکتر
             ";
+            echo env('OPENAI_API_KEY');
+            exit;
             $openAI = app(OpenAIService::class);
 
             $aiDescription = $openAI->chat([
