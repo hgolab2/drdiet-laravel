@@ -34,7 +34,7 @@ $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'
 
 ?>
 <body class="flex flex-center flex-col orange siyaha-theme">
-<div class="payment-form" style="padding-bottom: 0px;">
+<div class="payment-form" style="padding-bottom: 0px;direction:rtl">
     <div class="header flex flex-center">
         <img alt="logo" class="logo" src="https://di3t-club.com/logo.svg">
         <div class="product-card flex">
