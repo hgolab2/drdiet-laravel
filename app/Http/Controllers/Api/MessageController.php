@@ -169,6 +169,10 @@ class MessageController extends Controller
      */
     public function sendMessage(Request $request)
     {
+        return response()->json([
+            'status' => 'success',
+            'response' => true
+        ], 200);
         $request->validate([
             'to' => 'required|string',
             'message' => 'required|string',
