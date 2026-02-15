@@ -64,7 +64,8 @@ class DietLeadController extends Controller
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
         $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
 
-        $query = self::query();
+        // استفاده از مدل به جای self
+        $query = DietLead::query();
 
         // 🔐 سطح دسترسی
         $user = Auth::user();
@@ -96,6 +97,7 @@ class DietLeadController extends Controller
             ->orderByDesc('total')
             ->get();
     }
+
 
     public function __construct(WhatsappService $whatsappService)
     {
