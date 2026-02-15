@@ -21,7 +21,7 @@ class DietLeadController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/diet-leads/source-report",
+     *     path="/api/admin/diet-leads/source-report",
      *     summary="گزارش لیدها بر اساس منبع",
      *     description="تعداد لیدها بر اساس source شامل آمار روزانه، هفتگی، ماهانه و کل به همراه تعداد تماس‌نگرفته‌ها",
      *     tags={"Diet Leads Report"},

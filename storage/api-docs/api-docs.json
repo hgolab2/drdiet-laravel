@@ -981,14 +981,14 @@
                 ]
             }
         },
-        "/api/diet-leads/source-report": {
+        "/api/admin/diet-leads/source-report": {
             "get": {
                 "tags": [
                     "Diet Leads Report"
                 ],
                 "summary": "گزارش لیدها بر اساس منبع",
                 "description": "تعداد لیدها بر اساس source شامل آمار روزانه، هفتگی، ماهانه و کل به همراه تعداد تماس‌نگرفته‌ها",
-                "operationId": "8daf6814a4643ab6b0ec34cd4a91ad85",
+                "operationId": "7503729d6bd09d6cca87d0c40203a2f9",
                 "responses": {
                     "200": {
                         "description": "گزارش با موفقیت دریافت شد",

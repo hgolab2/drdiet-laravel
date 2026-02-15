@@ -161,7 +161,7 @@ Route::get('/diet-leads/{id}', [DietLeadController::class, 'show']);   // مشا
 Route::put('/diet-leads/{id}', [DietLeadController::class, 'update']); // ویرایش لید
 Route::delete('/diet-leads/{id}', [DietLeadController::class, 'destroy']); // حذف لید
 
-Route::get('diet-leads/source-report', [DietLeadController::class, 'sourceReport']);
+Route::get('/admin/diet-leads/source-report', [DietLeadController::class, 'sourceReport']);
 
 Route::post('/ai/generate', [DietUserController::class, 'generate']);
 
