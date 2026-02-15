@@ -222,6 +222,11 @@ body.orange .header .product-card .icon {
     background-color: #EF3E42;
 }
 
+.btn-black {
+    background-color: #fff;
+    color: #000;
+}
+
 .btn-red-outline {
     color: #EF3E42;
     border: 1px solid #EF3E42;

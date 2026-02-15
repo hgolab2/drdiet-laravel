@@ -42,7 +42,7 @@ $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'
             <div class="content flex">
                 <span class="title text-gray">المنتج: نظام غذائي</span>
                 <div class="flex flex-center">
-                    <b class="price"><?php echo $basePrcide; ?> USD</b>
+                    <b class="price"><?php echo $basePrcide; ?> دولار</b>
                     <!--span class="date text-gray">/  <?php echo $price ?> OMR</span-->
                 </div>
             </div>
@@ -79,11 +79,12 @@ $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'
             <input required type="email" placeholder="البريد الإلكتروني" name="billing_email" />
         </div>
         <div class="not-valid" id="Email"></div>
-        <button id="submitBtn" type="submit" class="flex flex-center btn btn-red w-full">
-            <img src="/seyaaha/images/bank-muscat.png" alt="bank muscat" width="102">
+        <button id="submitBtn" type="submit" class="flex flex-center btn btn-black w-full">
+            الدفع
         </button>
+        <img alt="" src="/seyaaha/images/pay.png" style="width: 100%;">
     </form>
-    <img alt="" src="/seyaaha/images/pay.png" style="width: 100%;">
+
 </div>
 <ul class="options flex flex-center" dir="rtl">
     <li class="flex flex-col">

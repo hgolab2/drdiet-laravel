@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>المركز الدولي للتغذية العلاجية - دايت کلوب</title>
-    <link href="css/font-face.css" rel="stylesheet" type="text/css">
-    <link href="css/style.css" rel="stylesheet" type="text/css">
+    <link href="/seyaaha/css/font-face.css" rel="stylesheet" type="text/css">
+    <link href="/seyaaha/css/style.css" rel="stylesheet" type="text/css">
     <meta content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=yes" name="viewport">
     <script src="https://www.paypal.com/sdk/js?client-id=AW5ThXjTyCwNX6DbOg8JLJTaoRN4n-SniYxXgRbu-TN-a1HHqI29czcna8OmsoCc-e2BJ_TeeY0IlxPS"></script>
 </head>
@@ -14,7 +14,7 @@
 $basePrcide = (int)@$_GET['price'];
 if($basePrcide < 10 ){
     $basePrcide = 10;
-} 
+}
 // $price =  $basePrcide*2.6;
 $price =  $basePrcide*0.38;
 
@@ -33,19 +33,17 @@ $orderId = date('YmdHis').rand(0,999);
 $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'; //needs filling
 
 ?>
-
-
 <body class="flex flex-center flex-col orange siyaha-theme">
-<div class="payment-form">
+<div class="payment-form" style="padding-bottom: 0px;direction:rtl">
     <div class="header flex flex-center">
         <img alt="logo" class="logo" src="https://di3t-club.com/logo.svg">
         <div class="product-card flex">
             <div class="icon flex flex-center"></div>
             <div class="content flex">
-                <span class="title text-gray">Product: Diet plan</span>
+                <span class="title text-gray">المنتج: نظام غذائي</span>
                 <div class="flex flex-center">
-                    <b class="price"><?php echo $basePrcide; ?> USD</b>
-                    <span class="date text-gray">/  <?php echo $price ?> OMR</span>
+                    <b class="price"><?php echo $basePrcide; ?> دولار</b>
+                    <!--span class="date text-gray">/  <?php echo $price ?> OMR</span-->
                 </div>
             </div>
         </div>
@@ -69,22 +67,24 @@ $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'
                     </div>
                 </div>
             </div>
-            <input required type="number" dir="ltr" placeholder="Phone number" name="phoneNumber" />
-            <input required type="hidden" dir="ltr" placeholder="Phone number" name="billing_phone" />
+            <input required type="number" dir="ltr" placeholder="رقم الهاتف" name="phoneNumber" />
+            <input required type="hidden" dir="ltr" placeholder="رقم الهاتف" name="billing_phone" />
         </div>
         <div class="not-valid" id="phoneNumber"></div>
         <div class="form-field">
-            <input required type="text" placeholder="Name" name="order_billing_first_name" />
+            <input required type="text" placeholder="الاسم" name="order_billing_first_name" />
         </div>
         <div class="not-valid" id="Name"></div>
         <div class="form-field">
-            <input required type="email" placeholder="Email" name="billing_email" />
+            <input required type="email" placeholder="البريد الإلكتروني" name="billing_email" />
         </div>
         <div class="not-valid" id="Email"></div>
-        <button id="submitBtn" type="submit" class="flex flex-center btn btn-red w-full">
-            <img src="images/bank-muscat.png" alt="bank muscat" width="102">
+        <button id="submitBtn" type="submit" class="flex flex-center btn btn-black w-full">
+            الدفع
         </button>
+        <img alt="" src="/seyaaha/images/pay.png" style="width: 100%;">
     </form>
+
 </div>
 <ul class="options flex flex-center" dir="rtl">
     <li class="flex flex-col">
@@ -141,7 +141,7 @@ $order_received_url = 'https://api.di3t-club.com/seyaaha/seyaahatransaction.php'
         <input id="protection" type="checkbox"/>
         <label class="text-half-dark flex flex-center" for="protection">
             كيف تضمن أمان عملية الدفع الخاصة بك؟
-            <img class="chevron" src="images/icons/chevron-down.svg" alt="chevron down" width="20">
+            <img class="chevron" src="/seyaaha/images/icons/chevron-down.svg" alt="chevron down" width="20">
         </label>
         <div class="description flex-col">
             <p class="text-half-dark">- شهادة SSL (اتصال آمن): يجب استخدام بروتوكول HTTPS لتأمين الاتصالات بينك وبين
