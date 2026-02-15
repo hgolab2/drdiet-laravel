@@ -64,7 +64,16 @@ class DietLeadController extends Controller
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
         $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
 
-        return self::select(
+        $query = self::query();
+
+        // 🔐 سطح دسترسی
+        $user = Auth::user();
+
+        if (!$user->isAdmin()) {
+            $query->where('expert_id', $user->id);
+        }
+
+        return $query->select(
                 'source',
 
                 // کل

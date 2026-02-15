@@ -72,7 +72,10 @@ class User extends Authenticatable
         return $img;
     }
 
-
+    public function isAdmin()
+    {
+        return $this->hasAnyRole('super_admin') ? true : false;
+    }
     // روابط
     public function dietUserWeeklies()
     {
