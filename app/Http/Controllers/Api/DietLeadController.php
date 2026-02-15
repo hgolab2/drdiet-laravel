@@ -78,8 +78,8 @@ class DietLeadController extends Controller
     }
 
     $sources = $sourceQuery->select(
-            DB::raw("'source' as type"),
-            DB::raw("source as label"),
+
+            DB::raw("source"),
 
             DB::raw("COUNT(*) as total"),
             DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
@@ -101,13 +101,15 @@ class DietLeadController extends Controller
     // =========================
     // اگر مدیر بود → کارشناسان هم اضافه شود
     // =========================
+   // echo $user->isAdmin();
+
     if ($user->isAdmin()) {
 
         $experts = DietLead::query()
             ->join('users', 'users.id', '=', 'diet_leads.expert_id')
             ->select(
-                DB::raw("'expert' as type"),
-                DB::raw("users.name as label"),
+
+                DB::raw("users.name as source"),
 
                 DB::raw("COUNT(*) as total"),
                 DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
