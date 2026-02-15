@@ -421,8 +421,17 @@ class DietLeadController extends Controller
             $query->where('age', $request->age);
         }
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+
+        if ($request->status == 0) {
+                $query->where(function ($q) {
+                    $q->where('status', 0)
+                    ->orWhereNull('status');
+                });
+            } else {
+                $query->where('status', $request->status);
+            }
         }
+
         if ($request->filled('country')) {
             $query->where('country', $request->country);
         }
