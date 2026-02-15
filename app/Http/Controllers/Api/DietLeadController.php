@@ -58,7 +58,7 @@ class DietLeadController extends Controller
      * )
      */
 
-    public static function sourceReport()
+    public function sourceReport()
 {
     $today = Carbon::today()->toDateString();
     $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
@@ -106,10 +106,10 @@ class DietLeadController extends Controller
     if ($user->isAdmin()) {
 
         $experts = DietLead::query()
-            ->join('users', 'users.id', '=', 'diet_leads.expert_id')
+            ->join('diet_users', 'diet_users.id', '=', 'diet_leads.expert_id')
             ->select(
 
-                DB::raw("users.name as source"),
+                DB::raw("diet_users.last_name as source"),
 
                 DB::raw("COUNT(*) as total"),
                 DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
@@ -123,9 +123,10 @@ class DietLeadController extends Controller
                 DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
                 DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
             )
-            ->groupBy('users.id', 'users.name')
+            ->groupBy('diet_users.id')
             ->get();
-
+        //echo $this->getQuery($experts);
+        //exit;
         $results = $results->merge($experts);
     }
 
