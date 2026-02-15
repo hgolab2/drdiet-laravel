@@ -307,7 +307,7 @@ class DietMealController extends Controller
                 'content' => $Prompt
             ]
             ]);
-            dd($aiDescription);
+            //dd($aiDescription);
             if ($aiDescription) {
                 $meal->description = $aiDescription;
                 $meal->save();
