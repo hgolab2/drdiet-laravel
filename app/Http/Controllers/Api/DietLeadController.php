@@ -59,44 +59,77 @@ class DietLeadController extends Controller
      */
 
     public static function sourceReport()
-    {
-        $today = Carbon::today()->toDateString();
-        $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
-        $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
+{
+    $today = Carbon::today()->toDateString();
+    $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
+    $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
 
-        // استفاده از مدل به جای self
-        $query = DietLead::query();
+    $user = Auth::user();
 
-        // 🔐 سطح دسترسی
-        $user = Auth::user();
+    $results = collect();
 
-        if (!$user->isAdmin()) {
-            $query->where('expert_id', $user->id);
-        }
+    // =========================
+    // گزارش بر اساس source
+    // =========================
+    $sourceQuery = DietLead::query();
 
-        return $query->select(
-                'source',
-
-                // کل
-                DB::raw("COUNT(*) as total"),
-                DB::raw("SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as total_not_contacted"),
-
-                // امروز
-                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
-                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' AND status = 0 THEN 1 ELSE 0 END) as today_not_contacted"),
-
-                // این هفته
-                DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
-                DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' AND status = 0 THEN 1 ELSE 0 END) as week_not_contacted"),
-
-                // این ماه
-                DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
-                DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' AND status = 0 THEN 1 ELSE 0 END) as month_not_contacted")
-            )
-            ->groupBy('source')
-            ->orderByDesc('total')
-            ->get();
+    if (!$user->isAdmin()) {
+        $sourceQuery->where('expert_id', $user->id);
     }
+
+    $sources = $sourceQuery->select(
+            DB::raw("'source' as type"),
+            DB::raw("source as label"),
+
+            DB::raw("COUNT(*) as total"),
+            DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
+
+            DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
+            DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
+
+            DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
+            DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
+
+            DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
+            DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
+        )
+        ->groupBy('source')
+        ->get();
+
+    $results = $results->merge($sources);
+
+    // =========================
+    // اگر مدیر بود → کارشناسان هم اضافه شود
+    // =========================
+    if ($user->isAdmin()) {
+
+        $experts = DietLead::query()
+            ->join('users', 'users.id', '=', 'diet_leads.expert_id')
+            ->select(
+                DB::raw("'expert' as type"),
+                DB::raw("users.name as label"),
+
+                DB::raw("COUNT(*) as total"),
+                DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
+
+                DB::raw("SUM(CASE WHEN DATE(diet_leads.created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
+                DB::raw("SUM(CASE WHEN DATE(diet_leads.created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
+
+                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
+                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
+
+                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
+                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
+            )
+            ->groupBy('users.id', 'users.name')
+            ->get();
+
+        $results = $results->merge($experts);
+    }
+
+    return $results->sortByDesc('total')->values();
+}
+
 
 
     public function __construct(WhatsappService $whatsappService)
