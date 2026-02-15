@@ -19,7 +19,7 @@ jobs:
       - name: Login to Harbor
         uses: docker/login-action@v3
         with:
-          registry: harbor.di3t-club.com
+          registry: scr.rafed.net
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
 
@@ -30,4 +30,4 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            harbor.di3t-club.com/drdiet/laravel:latest
+            scr.rafed.net/drdiet/laravel:latest
