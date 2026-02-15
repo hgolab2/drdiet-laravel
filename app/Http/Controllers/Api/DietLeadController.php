@@ -5,6 +5,8 @@ use App\Models\DietLead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use App\Services\WhatsappService;
 
 class DietLeadController extends Controller
@@ -16,6 +18,76 @@ class DietLeadController extends Controller
         return $query = vsprintf($query, $item->getBindings());
             //echo($query);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/diet-leads/source-report",
+     *     summary="گزارش لیدها بر اساس منبع",
+     *     description="تعداد لیدها بر اساس source شامل آمار روزانه، هفتگی، ماهانه و کل به همراه تعداد تماس‌نگرفته‌ها",
+     *     tags={"Diet Leads Report"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="گزارش با موفقیت دریافت شد",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="source", type="string", example="Instagram"),
+     *
+     *                 @OA\Property(property="total", type="integer", example=120),
+     *                 @OA\Property(property="total_not_contacted", type="integer", example=35),
+     *
+     *                 @OA\Property(property="today_total", type="integer", example=5),
+     *                 @OA\Property(property="today_not_contacted", type="integer", example=2),
+     *
+     *                 @OA\Property(property="week_total", type="integer", example=18),
+     *                 @OA\Property(property="week_not_contacted", type="integer", example=6),
+     *
+     *                 @OA\Property(property="month_total", type="integer", example=60),
+     *                 @OA\Property(property="month_not_contacted", type="integer", example=15)
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=401,
+     *         description="عدم دسترسی - نیاز به احراز هویت"
+     *     )
+     * )
+     */
+
+    public static function sourceReport()
+    {
+        $today = Carbon::today()->toDateString();
+        $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
+        $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
+
+        return self::select(
+                'source',
+
+                // کل
+                DB::raw("COUNT(*) as total"),
+                DB::raw("SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as total_not_contacted"),
+
+                // امروز
+                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
+                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' AND status = 0 THEN 1 ELSE 0 END) as today_not_contacted"),
+
+                // این هفته
+                DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
+                DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' AND status = 0 THEN 1 ELSE 0 END) as week_not_contacted"),
+
+                // این ماه
+                DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
+                DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' AND status = 0 THEN 1 ELSE 0 END) as month_not_contacted")
+            )
+            ->groupBy('source')
+            ->orderByDesc('total')
+            ->get();
+    }
+
     public function __construct(WhatsappService $whatsappService)
     {
         $this->middleware('auth:api')->except(['store' , 'edit']);;

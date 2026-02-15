@@ -981,6 +981,77 @@
                 ]
             }
         },
+        "/api/diet-leads/source-report": {
+            "get": {
+                "tags": [
+                    "Diet Leads Report"
+                ],
+                "summary": "گزارش لیدها بر اساس منبع",
+                "description": "تعداد لیدها بر اساس source شامل آمار روزانه، هفتگی، ماهانه و کل به همراه تعداد تماس‌نگرفته‌ها",
+                "operationId": "8daf6814a4643ab6b0ec34cd4a91ad85",
+                "responses": {
+                    "200": {
+                        "description": "گزارش با موفقیت دریافت شد",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "source": {
+                                                "type": "string",
+                                                "example": "Instagram"
+                                            },
+                                            "total": {
+                                                "type": "integer",
+                                                "example": 120
+                                            },
+                                            "total_not_contacted": {
+                                                "type": "integer",
+                                                "example": 35
+                                            },
+                                            "today_total": {
+                                                "type": "integer",
+                                                "example": 5
+                                            },
+                                            "today_not_contacted": {
+                                                "type": "integer",
+                                                "example": 2
+                                            },
+                                            "week_total": {
+                                                "type": "integer",
+                                                "example": 18
+                                            },
+                                            "week_not_contacted": {
+                                                "type": "integer",
+                                                "example": 6
+                                            },
+                                            "month_total": {
+                                                "type": "integer",
+                                                "example": 60
+                                            },
+                                            "month_not_contacted": {
+                                                "type": "integer",
+                                                "example": 15
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "عدم دسترسی - نیاز به احراز هویت"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/lead/register1": {
             "post": {
                 "tags": [
@@ -7924,6 +7995,10 @@
         {
             "name": "DietItem",
             "description": "DietItem"
+        },
+        {
+            "name": "Diet Leads Report",
+            "description": "Diet Leads Report"
         },
         {
             "name": "Diet Leads",
