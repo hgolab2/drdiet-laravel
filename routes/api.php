@@ -80,7 +80,6 @@ Route::post('/user-weekly', [DietUserWeeklyController::class, 'store']);
 Route::get('/user-weekly/{id}', [DietUserWeeklyController::class, 'show']);
 Route::put('/user-weekly/{id}', [DietUserWeeklyController::class, 'update']);
 Route::post('/diet/updateWeekly', [DietUserWeeklyController::class, 'updateWeekly']);
-Route::post('/diet/updateWeekly', [DietUserWeeklyController::class, 'updateWeekly']);
 Route::post('/addDiet', [DietUserWeeklyController::class, 'addDiet']);
 
 Route::post('/updateWeight', [DietUserWeeklyController::class, 'updateWeight']);
@@ -160,6 +159,7 @@ Route::put('/diet-leads-edit', [DietLeadController::class, 'edit']); // ویرا
 Route::get('/diet-leads/{id}', [DietLeadController::class, 'show']);   // مشاهده جزئیات لید
 Route::put('/diet-leads/{id}', [DietLeadController::class, 'update']); // ویرایش لید
 Route::delete('/diet-leads/{id}', [DietLeadController::class, 'destroy']); // حذف لید
+Route::post('/diet-leads/assign-expert', [DietLeadController::class, 'assignExpert']);
 
 Route::get('/admin/diet-leads/source-report', [DietLeadController::class, 'sourceReport']);
 

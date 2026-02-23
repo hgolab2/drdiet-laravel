@@ -822,6 +822,258 @@ class DietUserWeeklyController extends Controller
             'mealTypeLabel' => 'required|string',
         ]);
 
+        DB::beginTransaction();
+
+        try {
+
+            // گرفتن dietUserWeekly همراه weekly و روابطش (حذف N+1)
+            $dietUserWeekly = DietUserWeekly::with([
+                'weekly.meals',
+                'weekly.cultures',
+                'weekly.types'
+            ])->find($request->dietUserWeeklyId);
+
+            if (!$dietUserWeekly) {
+                return response()->json(['message' => 'یافت نشد.'], 404);
+            }
+
+            $weekly = $dietUserWeekly->weekly;
+            if (!$weekly) {
+                return response()->json(['message' => 'هفته مرتبط پیدا نشد.'], 404);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 1- کپی weekly
+            |--------------------------------------------------------------------------
+            */
+            $newWeekly = $weekly->replicate();
+            $newWeekly->type = 'user';
+            $newWeekly->save();
+
+            /*
+            |--------------------------------------------------------------------------
+            | 2- کپی meals (بدون replicate اضافی)
+            |--------------------------------------------------------------------------
+            */
+            $mealTypeId = MealType::fromLabel($request->mealTypeLabel);
+
+            foreach ($weekly->meals as $meal) {
+
+                $newMeal = $meal->replicate();
+                $newMeal->diet_weekly_id = $newWeekly->id;
+
+                // اگر این meal همون day و mealType بود، mealId جدید ست شود
+                if ($meal->day == $request->day && $meal->mealTypeId == $mealTypeId) {
+                    $newMeal->mealId = $request->mealId;
+                }
+
+                $newMeal->save();
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 3- کپی cultures
+            |--------------------------------------------------------------------------
+            */
+            foreach ($weekly->cultures as $culture) {
+                $newCulture = $culture->replicate();
+                $newCulture->diet_weekly_id = $newWeekly->id;
+                $newCulture->save();
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 4- کپی types
+            |--------------------------------------------------------------------------
+            */
+            foreach ($weekly->types as $type) {
+                $newType = $type->replicate();
+                $newType->diet_weekly_id = $newWeekly->id;
+                $newType->save();
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | 5- آپدیت weeklyId در diet_user_weekly
+            |--------------------------------------------------------------------------
+            */
+            $dietUserWeekly->weeklyId = $newWeekly->id;
+            $dietUserWeekly->save();
+
+            /*
+            |--------------------------------------------------------------------------
+            | 6- حذف آیتم‌های قبلی
+            |--------------------------------------------------------------------------
+            */
+            DietUserWeeklyItem::where('userWeeklyId', $dietUserWeekly->id)->delete();
+
+            /*
+            |--------------------------------------------------------------------------
+            | 7- محاسبه BMR و کالری هدف
+            |--------------------------------------------------------------------------
+            */
+            $dietUser = User::find($user->id);
+
+            if (!$dietUser || !$dietUser->birth_date) {
+                return response()->json(['message' => 'اطلاعات کاربر ناقص است.'], 422);
+            }
+
+            $age = Carbon::parse($dietUser->birth_date)->age;
+            $weight = $dietUser->weight;
+            $height = $dietUser->height;
+            $gender = $dietUser->gender;
+
+            $bmr = $gender === 'male'
+                ? (10 * $weight + 6.25 * $height - 5 * $age + 5)
+                : (10 * $weight + 6.25 * $height - 5 * $age - 161);
+
+            $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
+            if (!$activityLevel) {
+                return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
+            }
+
+            $activityMultiplier = match ($activityLevel) {
+                DailyActivityLevel::سبک => 1.2,
+                DailyActivityLevel::متوسط => 1.55,
+                DailyActivityLevel::شدید,
+                DailyActivityLevel::بسیار_شدید => 1.72,
+            };
+
+            $bmr *= $activityMultiplier;
+
+            switch ($dietUser->diet_type_id) {
+                case 1:
+                    $reduction = match ($activityLevel) {
+                        DailyActivityLevel::سبک => 1100,
+                        DailyActivityLevel::متوسط => 900,
+                        DailyActivityLevel::شدید,
+                        DailyActivityLevel::بسیار_شدید => 500,
+                    };
+                    $targetCalories = $bmr - $reduction;
+                    break;
+
+                case 2:
+                    $targetCalories = $bmr;
+                    break;
+
+                case 3:
+                    $increase = match ($activityLevel) {
+                        DailyActivityLevel::سبک => 500,
+                        DailyActivityLevel::متوسط => 900,
+                        DailyActivityLevel::شدید,
+                        DailyActivityLevel::بسیار_شدید => 1100,
+                    };
+                    $targetCalories = $bmr + $increase;
+                    break;
+            }
+
+            $dietUserWeekly->update([
+                'calories' => $targetCalories,
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | 8- گرفتن همه داده‌ها یکجا (حذف N+1 کامل)
+            |--------------------------------------------------------------------------
+            */
+            $calorieData = Calorie::where('dietTypeId', $dietUser->diet_type_id)->first();
+
+            $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $newWeekly->id)->get();
+
+            $mealIds = $weeklyMeals->pluck('mealId')->unique();
+
+            $mealItems = DietMealItem::whereIn('mealId', $mealIds)->get()->groupBy('mealId');
+
+            $dietItems = DietItem::whereIn('id', $mealItems->flatten()->pluck('itemId')->unique())
+                ->get()
+                ->keyBy('id');
+
+            /*
+            |--------------------------------------------------------------------------
+            | 9- Bulk Insert
+            |--------------------------------------------------------------------------
+            */
+            $insertData = [];
+
+            foreach ($weeklyMeals as $meal) {
+
+                $mealType = MealType::from($meal->mealTypeId);
+                $fieldName = lcfirst($mealType->name);
+
+                $c = $this->getCalorie($calorieData, $fieldName, $targetCalories);
+
+                $items = $mealItems[$meal->mealId] ?? collect();
+
+                foreach ($items as $item) {
+
+                    $ite = $dietItems[$item->itemId] ?? null;
+                    if (!$ite) continue;
+
+                    $cou = 0;
+
+                    if ($ite->caloriesGram > 0) {
+                        $cou = (($c * $item->percent) / 100) /
+                            ($ite->caloriesGram * $ite->weightUnit);
+                    }
+
+                    $unitCount = round($cou * 2) / 2;
+
+                    if ($ite->atLeast > 0) {
+                        $step = $ite->atLeast;
+                        $unitCount = round($cou / $step) * $step;
+                    }
+
+                    $unitCount = max($unitCount, $ite->atLeast);
+
+                    $insertData[] = [
+                        'userWeeklyId' => $dietUserWeekly->id,
+                        'dietWeeklyMealId' => $meal->id,
+                        'mealId' => $item->mealId,
+                        'mealItemId' => $item->itemId,
+                        'calories' => (($c * $item->percent) / 100),
+                        'unitCount' => $unitCount,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+
+            if (!empty($insertData)) {
+                DietUserWeeklyItem::insert($insertData);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'ویرایش شد.',
+                'weekly_id' => $newWeekly->id
+            ]);
+
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'خطا در پردازش',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    /*public function updateWeekly(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        }
+
+        $request->validate([
+            'dietUserWeeklyId' => 'required|integer',
+            'mealId' => 'required|integer',
+            'day' => 'required|integer',
+            'mealTypeLabel' => 'required|string',
+        ]);
+
         // پیدا کردن رکورد diet_user_weekly
         $dietUserWeekly = DietUserWeekly::find($request->dietUserWeeklyId);
         if (!$dietUserWeekly) {
@@ -928,22 +1180,7 @@ class DietUserWeeklyController extends Controller
         };
         $bmr = $bmr * $rR;
 
-        /*$bmi = $weight / (($weight/100) * ($weight/100));
-        if($bmi < 18)
-        {
-            $weight_goal_id = 2;
-        }
-        elseif($bmi > 24)
-        {
-            $weight_goal_id = 1;
-        }
-        else
-        {
-            $weight_goal_id = 3;
-        }*/
 
-
-        //switch($weight_goal_id)
         switch($dietUser->diet_type_id)
         {
             case 1:
@@ -1013,7 +1250,7 @@ class DietUserWeeklyController extends Controller
                 ]);
             }
         }
-    }
+    }*/
 
 
     /**

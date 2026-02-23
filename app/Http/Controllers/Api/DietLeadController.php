@@ -19,6 +19,133 @@ class DietLeadController extends Controller
             //echo($query);
     }
 
+    public function __construct(WhatsappService $whatsappService)
+    {
+        $this->middleware('auth:api')->except(['store' , 'edit']);;
+        $this->whatsappService = $whatsappService;
+    }
+
+    private function normalizePhone(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9+]/', '', $phone);
+
+        if (preg_match('/^09\d{9}$/', $phone)) {
+            $phone = '+98' . substr($phone, 1);
+        }
+
+        if (preg_match('/^9\d{9}$/', $phone)) {
+            $phone = '+98' . $phone;
+        }
+
+        if (preg_match('/^98\d{10}$/', $phone)) {
+            $phone = '+' . $phone;
+        }
+
+        return $phone;
+    }
+
+
+
+    /**
+     * Assign expert to diet lead by WhatsApp number
+     *
+     * @OA\Post(
+     *     path="/api/diet-leads/assign-expert",
+     *     summary="Assign expert to a diet lead using WhatsApp number",
+     *     tags={"DietLead"},
+     *     security={{"sanctum":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"customer_id","whatsapp_number"},
+     *             @OA\Property(
+     *                 property="customer_id",
+     *                 type="integer",
+     *                 example=15,
+     *                 description="ID of the diet lead"
+     *             ),
+     *             @OA\Property(
+     *                 property="whatsapp_number",
+     *                 type="string",
+     *                 example="+989123456789",
+     *                 description="Expert WhatsApp number"
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Expert assigned successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Expert assigned successfully"),
+     *             @OA\Property(property="expert_id", type="integer", example=3)
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="Lead or expert not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Lead not found")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error"
+     *     )
+     * )
+     */
+
+    public function assignExpert(Request $request)
+    {
+        $request->validate([
+            'customer_id'     => 'required|integer|exists:diet_leads,id',
+            'whatsapp_number' => 'required|string',
+        ]);
+
+        // نرمال سازی شماره
+        $phone = $this->normalizePhone($request->whatsapp_number);
+
+        // پیدا کردن لید
+        $lead = DietLead::find($request->customer_id);
+        if (!$lead) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lead not found'
+            ], 404);
+        }
+
+        // پیدا کردن کارشناس با حالت‌های مختلف شماره
+        $expert = User::where(function ($query) use ($phone) {
+            $query->where('phone', $phone)
+                ->orWhere('phone', ltrim($phone, '+'))
+                ->orWhere('phone', preg_replace('/^\+?98/', '0', $phone));
+        })->first();
+
+        if (!$expert) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Expert not found'
+            ], 404);
+        }
+
+        // ثبت کارشناس
+        $lead->expert_id = $expert->id;
+        $lead->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Expert assigned successfully',
+            'expert_id' => $expert->id
+        ]);
+    }
+
+
+
     /**
      * @OA\Get(
      *     path="/api/admin/diet-leads/source-report",
@@ -57,89 +184,86 @@ class DietLeadController extends Controller
      *     )
      * )
      */
-
     public function sourceReport()
-{
-    $today = Carbon::today()->toDateString();
-    $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
-    $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        }
+        $today = Carbon::today()->toDateString();
+        $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
+        $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
 
-    $user = Auth::user();
+        $user = Auth::user();
 
-    $results = collect();
+        $results = collect();
 
-    // =========================
-    // گزارش بر اساس source
-    // =========================
-    $sourceQuery = DietLead::query();
+        // =========================
+        // گزارش بر اساس source
+        // =========================
+        $sourceQuery = DietLead::query();
 
-    if (!$user->isAdmin()) {
-        $sourceQuery->where('expert_id', $user->id);
-    }
+        if (!$user->isAdmin()) {
+            $sourceQuery->where('expert_id', $user->id);
+        }
 
-    $sources = $sourceQuery->select(
+        $sources = $sourceQuery->select(
 
-            DB::raw("source"),
-
-            DB::raw("COUNT(*) as total"),
-            DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
-
-            DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
-            DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
-
-            DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
-            DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
-
-            DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
-            DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
-        )
-        ->groupBy('source')
-        ->get();
-
-    $results = $results->merge($sources);
-
-    // =========================
-    // اگر مدیر بود → کارشناسان هم اضافه شود
-    // =========================
-   // echo $user->isAdmin();
-
-    if ($user->isAdmin()) {
-
-        $experts = DietLead::query()
-            ->join('diet_users', 'diet_users.id', '=', 'diet_leads.expert_id')
-            ->select(
-
-                DB::raw("diet_users.last_name as source"),
+                DB::raw("source"),
 
                 DB::raw("COUNT(*) as total"),
                 DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
 
-                DB::raw("SUM(CASE WHEN DATE(diet_leads.created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
-                DB::raw("SUM(CASE WHEN DATE(diet_leads.created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
+                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
+                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
 
-                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
-                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
+                DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
+                DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
 
-                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
-                DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
+                DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
+                DB::raw("SUM(CASE WHEN created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
             )
-            ->groupBy('diet_users.id')
+            ->groupBy('source')
             ->get();
-        //echo $this->getQuery($experts);
-        //exit;
-        $results = $results->merge($experts);
+
+        $results = $results->merge($sources);
+
+        // =========================
+        // اگر مدیر بود → کارشناسان هم اضافه شود
+        // =========================
+        // echo $user->isAdmin();
+
+        if ($user->isAdmin()) {
+
+            $experts = DietLead::query()
+                ->join('diet_users', 'diet_users.id', '=', 'diet_leads.expert_id')
+                ->select(
+
+                    DB::raw("diet_users.last_name as source"),
+
+                    DB::raw("COUNT(*) as total"),
+                    DB::raw("SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as total_not_contacted"),
+
+                    DB::raw("SUM(CASE WHEN DATE(diet_leads.created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
+                    DB::raw("SUM(CASE WHEN DATE(diet_leads.created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
+
+                    DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
+                    DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
+
+                    DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' THEN 1 ELSE 0 END) as month_total"),
+                    DB::raw("SUM(CASE WHEN diet_leads.created_at >= '{$monthStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as month_not_contacted")
+                )
+                ->groupBy('diet_users.id')
+                ->get();
+            //echo $this->getQuery($experts);
+            //exit;
+            $results = $results->merge($experts);
+        }
+
+        return $results->sortByDesc('total')->values();
     }
 
-    return $results->sortByDesc('total')->values();
-}
 
-
-
-    public function __construct(WhatsappService $whatsappService)
-    {
-        $this->middleware('auth:api')->except(['store' , 'edit']);;
-        $this->whatsappService = $whatsappService;
-    }
     /**
      * @OA\Post(
      *   path="/api/lead/register1",
@@ -351,7 +475,6 @@ class DietLeadController extends Controller
             'data' => $lead
         ], 201);
     }
-
 
 
     /**
@@ -657,7 +780,6 @@ $message = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $message);
      */
     public function edit(Request $request)
     {
-
         // ✅ پیدا کردن لید بر اساس شماره تلفن
         $lead = DietLead::where('phone', $request->phone_number)->first();
 

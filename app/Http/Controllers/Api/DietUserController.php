@@ -129,6 +129,7 @@ class DietUserController extends Controller
      *             @OA\Property(property="has_diet_history", type="integer", example=0),
      *             @OA\Property(property="diet_history", type="string", example=""),
      *             @OA\Property(property="package", type="integer", example=1),
+     *             @OA\Property(property="max_lead", type="integer", example=1),
      *             @OA\Property(
      *                 property="roles",
      *                 type="array",
@@ -197,6 +198,7 @@ class DietUserController extends Controller
             'has_diet_history' => 'nullable|integer',
             'diet_history' => 'nullable|int',
             'package' => 'nullable|integer',
+            'max_lead' => 'nullable|integer',
             'roles' => 'nullable|array',
             'roles.*' => 'integer|exists:roles,id',
         ]);
@@ -282,6 +284,7 @@ class DietUserController extends Controller
      *             @OA\Property(property="has_diet_history", type="integer", enum={0,1}),
      *             @OA\Property(property="diet_history", type="string"),
      *             @OA\Property(property="package", type="integer"),
+     *             @OA\Property(property="max_lead", type="integer", example=1),
      *             @OA\Property(
      *                 property="roles",
      *                 type="array",
@@ -346,6 +349,7 @@ class DietUserController extends Controller
             'has_diet_history' => 'nullable|integer',
             'diet_history' => 'nullable|string',
             'package' => 'nullable|integer',
+            'max_lead' => 'nullable|integer',
             'roles' => 'nullable|array',
             'roles.*' => 'integer|exists:roles,id',
         ]);
@@ -494,6 +498,7 @@ class DietUserController extends Controller
      *             @OA\Property(property="has_diet_history", type="integer", example=1),
      *             @OA\Property(property="diet_history", type="string", example="Previously followed a keto diet"),
      *             @OA\Property(property="package", type="integer", example=2)
+     *             @OA\Property(property="max_lead", type="integer", example=1),
      *         )
      *     ),
      *     @OA\Response(
@@ -553,6 +558,7 @@ class DietUserController extends Controller
             'has_diet_history' => 'nullable|integer',
             'diet_history' => 'nullable|string',
             'package' => 'nullable|integer',
+            'max_lead' => 'nullable|integer'
         ]);
 
         if (isset($validated['password'])) {

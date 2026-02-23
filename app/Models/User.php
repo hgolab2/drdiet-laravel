@@ -49,7 +49,8 @@ class User extends Authenticatable
         'diet_history',
         'food_type_id',
         'package',
-        'expire_at'/*,
+        'expire_at',
+        'max_lead'/*,
         'ai_description'*/
     ];
     protected $hidden = [
