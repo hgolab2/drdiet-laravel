@@ -295,8 +295,7 @@ class DietMealController extends Controller
             ملاحظة هامة: إذا كانت الوجبة تتكون من عنصر واحد فقط (مثل: التمر أو التفاح)، اكتفِ بذكر \"الفوائد الصحية\" فقط وتجاهل الأقسام الأخرى.
             التنسيق: اجعل العناوين بارزة واللغة واضحة وبسيطة في اقل من 700 کاراکتر
             ";
-
-
+            //dd(env('OPENAI_API_KEY'));
             $openAI = app(OpenAIService::class);
 
             $aiDescription = $openAI->chat([

@@ -243,15 +243,27 @@ class DietUserWeeklyController extends Controller
             'weight' => 'required|numeric',
         ]);
         $weight = $request->weight;
-        $weekly = DietWeekly::from('diet_weekly as dw')
-        ->where('food_type_id', $user->food_type_id)
-        ->join('diet_weekly_types as dwt', 'dw.id', '=', 'dwt.diet_weekly_id')
-        ->join('diet_weekly_cultures as dwc', 'dw.id', '=', 'dwc.diet_weekly_id')
-        ->where('dwt.type_id', $user->diet_type_id)
-        ->where('dwc.food_culture_id', $user->food_culture)
-        ->inRandomOrder()
-        ->select('dw.*')->first();
-
+        if($user->food_type_id == 1)
+        {
+            $weekly = DietWeekly::from('diet_weekly as dw')
+            ->where('food_type_id', $user->food_type_id)
+            ->join('diet_weekly_types as dwt', 'dw.id', '=', 'dwt.diet_weekly_id')
+            ->join('diet_weekly_cultures as dwc', 'dw.id', '=', 'dwc.diet_weekly_id')
+            ->where('dwt.type_id', $user->diet_type_id)
+            ->where('dwc.food_culture_id', $user->food_culture)
+            ->inRandomOrder()
+            ->select('dw.*')->first();
+        }
+        else
+        {
+            $weekly = DietWeekly::from('diet_weekly as dw')
+            ->where('food_type_id', $user->food_type_id)
+            ->join('diet_weekly_types as dwt', 'dw.id', '=', 'dwt.diet_weekly_id')
+            ->join('diet_weekly_cultures as dwc', 'dw.id', '=', 'dwc.diet_weekly_id')
+            ->where('dwt.type_id', $user->diet_type_id)
+            ->inRandomOrder()
+            ->select('dw.*')->first();
+        }
         if($weekly != null)
         {
             $dietUser = $user;
