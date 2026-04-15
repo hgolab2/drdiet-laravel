@@ -264,6 +264,7 @@ class DietUserWeeklyController extends Controller
             ->inRandomOrder()
             ->select('dw.*')->first();
         }
+        dd($weekly);
         if($weekly != null)
         {
             $dietUser = $user;
