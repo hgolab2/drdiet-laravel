@@ -266,6 +266,7 @@ class DietUserWeeklyController extends Controller
         }
         //dd($weekly);
 
+        
         if($weekly != null)
         {
             $dietUser = $user;
