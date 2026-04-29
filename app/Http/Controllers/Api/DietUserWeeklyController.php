@@ -265,6 +265,7 @@ class DietUserWeeklyController extends Controller
             ->select('dw.*')->first();
         }
         dd($weekly);
+        
         if($weekly != null)
         {
             $dietUser = $user;
