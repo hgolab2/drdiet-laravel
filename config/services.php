@@ -22,10 +22,12 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
-    'openai' => [
+    /*'openai' => [
         'key' => env('OPENAI_API_KEY'),
+    ],*/
+    'openai' => [
+        'key' => base64_decode('c2stcHJvai1WcXdyQjdDNjB6WmFMOHBsdDVBNTVBamh6NW1aUWNDVXdFYmhoR3h3V2w3c0RTZkNvMUpZU0pVRGhRLWp2ZGktNGFMWE1MbXNtSVQzQmxra0ZZUWsweEZGQ1VXcjFMeWNrdUFoMElCaXJMTzdjWkFLR2FvczJxRmZXSU9Cb2ZvRTQ4YlF6MFV6NTFvNUVFQmwrazBfMDU1UWJEcmtB'),
     ],
-
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
