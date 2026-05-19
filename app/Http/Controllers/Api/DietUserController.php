@@ -1111,7 +1111,7 @@ class DietUserController extends Controller
                 'items' => $items,
             ];
         }
-        /*if (empty($item->ai_description)) {
+        if (empty($item->ai_description)) {
             $aiProfileData = [
                 'gender' => $item->gender,
                 'age' => $age,
@@ -1147,7 +1147,7 @@ class DietUserController extends Controller
             ]);
             $item->ai_description = $aiDescription;
             $item->save();
-        }*/
+        }
 
         return response()->json([
             'id' => $item->id,
