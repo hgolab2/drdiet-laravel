@@ -59,7 +59,7 @@ class DietUserWeeklyController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"userId", "fromdate", "todate", "weeklyId"},
+     *             required={"userId", "fromdate", "weeklyId"},
      *             @OA\Property(property="userId", type="integer", example=5),
      *             @OA\Property(property="fromdate", type="string", format="date", example="2025-07-01"),
      *             @OA\Property(property="weeklyId", type="integer", example=2),
@@ -87,7 +87,7 @@ class DietUserWeeklyController extends Controller
             'userId' => 'required|integer',
             'fromdate' => 'required|date',
             'weeklyId' => 'required|integer',
-            'weight' => 'required|numeric',
+            'weight' => 'nullable|numeric',
         ]);
         $fromDate = Carbon::parse($request->fromdate);
         $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
@@ -103,7 +103,20 @@ class DietUserWeeklyController extends Controller
         }
 
         $age = Carbon::parse($birthDate)->age;
-        $weight = $request->weight;
+        // اگر وزن ارسال شد
+        if ($request->filled('weight'))
+        {
+            $weight = $request->weight;
+            // بروزرسانی وزن کاربر
+            $dietUser->current_weight = $weight;
+            $dietUser->weight_updatedate = now();
+            $dietUser->save();
+        }
+        else
+        {
+            // اگر وزن ارسال نشد
+            $weight = $dietUser->current_weight;
+        }
         $height = $dietUser->height;
         $gender = $dietUser->gender;
 
@@ -223,7 +236,7 @@ class DietUserWeeklyController extends Controller
      *     tags={"DietUserWeekly"},
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
-     *         required=true,
+     *         required=false,
      *         @OA\JsonContent(
      *             @OA\Property(property="weight", type="integer", example=85),
      *         )
@@ -236,13 +249,31 @@ class DietUserWeeklyController extends Controller
     public function updateWeight(Request $request)
     {
         $user = Auth::user();
+
         if (!$user) {
             return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
         }
+
         $request->validate([
-            'weight' => 'required|numeric',
+            'weight' => 'nullable|numeric',
         ]);
-        $weight = $request->weight;
+
+        // اگر وزن ارسال شد
+        if ($request->filled('weight')) {
+            $weight = $request->weight;
+
+            // بروزرسانی اطلاعات کاربر
+            $user->current_weight = $weight;
+            $user->weight_updatedate = now();
+            $user->save();
+
+        }
+        else
+        {
+            // اگر وزن ارسال نشد
+            $weight = $user->current_weight;
+        }
+
         if($user->food_type_id == 1)
         {
             $weekly = DietWeekly::from('diet_weekly as dw')
@@ -266,12 +297,12 @@ class DietUserWeeklyController extends Controller
         }
         //dd($weekly);
 
-        
+
         if($weekly != null)
         {
             $dietUser = $user;
             $fromDate = Carbon::today();;
-            $todate = $fromDate->copy()->addDays(14)->format('Y-m-d');
+            $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
             $birthDate = $dietUser->birth_date;
             if (!$birthDate) {
                 return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
@@ -1511,6 +1542,8 @@ class DietUserWeeklyController extends Controller
                 'weekly' => $latestPlan->weekly?->name,
                 'calories' => $latestPlan->calories,
                 'weight' => $latestPlan->weight,
+                'current_weight' => $latestPlan->current_weight,
+                'weight_updatedate' => $latestPlan->weight_updatedate,
                 'created_at' => $latestPlan->created_at,
                 'updated_at' => $latestPlan->updated_at,
                 'items' => [],
@@ -1650,6 +1683,7 @@ class DietUserWeeklyController extends Controller
                 'weekly' => $latestPlan->weekly?->name,
                 'calories' => $latestPlan->calories,
                 'weight' => $latestPlan->weight,
+
                 'created_at' => $latestPlan->created_at,
                 'updated_at' => $latestPlan->updated_at,
                 'items' => [],
@@ -1723,6 +1757,8 @@ class DietUserWeeklyController extends Controller
             'height' => $item->height,
             'weight' => $item->weight,
             'wrist_size' => $item->wrist_size,
+            'current_weight' => $item->current_weight,
+            'weight_updatedate' => $item->weight_updatedate,
             'pregnancy_week' => $item->pregnancy_week,
             'country_id' => $item->country_id,
             'state_id' => $item->state_id,

@@ -497,7 +497,7 @@ class DietUserController extends Controller
      *             @OA\Property(property="diet_goal", type="integer", example=1),
      *             @OA\Property(property="has_diet_history", type="integer", example=1),
      *             @OA\Property(property="diet_history", type="string", example="Previously followed a keto diet"),
-     *             @OA\Property(property="package", type="integer", example=2)
+     *             @OA\Property(property="package", type="integer", example=2),
      *             @OA\Property(property="max_lead", type="integer", example=1),
      *         )
      *     ),

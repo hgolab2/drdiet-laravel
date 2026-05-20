@@ -981,6 +981,96 @@
                 ]
             }
         },
+        "/api/diet-leads/assign-expert": {
+            "post": {
+                "tags": [
+                    "DietLead"
+                ],
+                "summary": "Assign expert to a diet lead using WhatsApp number",
+                "description": "Assign expert to diet lead by WhatsApp number",
+                "operationId": "3f8031b0595c3a8af29ac9946fadacde",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "customer_id",
+                                    "whatsapp_number"
+                                ],
+                                "properties": {
+                                    "customer_id": {
+                                        "description": "ID of the diet lead",
+                                        "type": "integer",
+                                        "example": 15
+                                    },
+                                    "whatsapp_number": {
+                                        "description": "Expert WhatsApp number",
+                                        "type": "string",
+                                        "example": "+989123456789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Expert assigned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Expert assigned successfully"
+                                        },
+                                        "expert_id": {
+                                            "type": "integer",
+                                            "example": 3
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Lead or expert not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Lead not found"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/admin/diet-leads/source-report": {
             "get": {
                 "tags": [
@@ -2538,6 +2628,10 @@
                                         "type": "integer",
                                         "example": 1
                                     },
+                                    "max_lead": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
                                     "roles": {
                                         "description": "آرایه‌ای از شناسه نقش‌ها برای اختصاص به کاربر",
                                         "type": "array",
@@ -2742,6 +2836,10 @@
                                     },
                                     "package": {
                                         "type": "integer"
+                                    },
+                                    "max_lead": {
+                                        "type": "integer",
+                                        "example": 1
                                     },
                                     "roles": {
                                         "description": "آرایه‌ای از شناسه نقش‌ها برای اختصاص به کاربر",
@@ -2986,6 +3084,10 @@
                                     "package": {
                                         "type": "integer",
                                         "example": 2
+                                    },
+                                    "max_lead": {
+                                        "type": "integer",
+                                        "example": 1
                                     }
                                 },
                                 "type": "object"
@@ -3780,7 +3882,6 @@
                                 "required": [
                                     "userId",
                                     "fromdate",
-                                    "todate",
                                     "weeklyId"
                                 ],
                                 "properties": {
@@ -3849,7 +3950,7 @@
                 "summary": "ویرایش وزن و دریافت اتوماتیک رژیم",
                 "operationId": "880143d4e151e387f69a7c6b30c110d7",
                 "requestBody": {
-                    "required": true,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -7995,6 +8096,10 @@
         {
             "name": "DietItem",
             "description": "DietItem"
+        },
+        {
+            "name": "DietLead",
+            "description": "DietLead"
         },
         {
             "name": "Diet Leads Report",

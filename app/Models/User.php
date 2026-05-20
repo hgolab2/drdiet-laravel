@@ -50,7 +50,10 @@ class User extends Authenticatable
         'food_type_id',
         'package',
         'expire_at',
-        'max_lead'/*,
+        'max_lead',
+        'current_weight',
+        'weight_updatedate'
+        /*,
         'ai_description'*/
     ];
     protected $hidden = [
