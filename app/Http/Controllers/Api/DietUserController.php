@@ -872,8 +872,6 @@ class DietUserController extends Controller
             });
         }
 
-
-
         $totalCount = $query->count();
         $users = $query->orderBy('id', 'desc')->paginate($pageSize);
         $users = array_map(function ($user) {

@@ -620,10 +620,11 @@ class DietUserWeeklyController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"userId", "fromdate", "todate", "weeklyId"},
+     *             required={"userId", "fromdate", "weeklyId"},
      *             @OA\Property(property="userId", type="integer", example=5),
      *             @OA\Property(property="fromdate", type="string", format="date", example="2025-07-01"),
      *             @OA\Property(property="weeklyId", type="integer", example=2),
+     *             @OA\Property(property="weight", type="integer", example=85),
      *         )
      *     ),
      *     @OA\Response(
@@ -648,19 +649,24 @@ class DietUserWeeklyController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
+
         if (!$user->hasAnyRole(['super_admin', 'nutrition_expert'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $weekly = DietUserWeekly::find($id);
-        if (!$weekly) return response()->json(['message' => 'یافت نشد.'], 404);
+
+        if (!$weekly) {
+            return response()->json(['message' => 'یافت نشد.'], 404);
+        }
 
         $request->validate([
             'userId' => 'required|integer',
             'fromdate' => 'required|date',
             'weeklyId' => 'required|integer',
-            'weight' => 'required|integer',
+            'weight' => 'nullable|numeric',
         ]);
+
         $fromDate = Carbon::parse($request->fromdate);
         $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
 
@@ -669,17 +675,35 @@ class DietUserWeeklyController extends Controller
 
         // دریافت اطلاعات کاربر رژیم
         $dietUser = User::find($request->userId);
+
         if (!$dietUser) {
             return response()->json(['message' => 'کاربر یافت نشد.'], 404);
         }
 
         $birthDate = $dietUser->birth_date;
+
         if (!$birthDate) {
             return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
         }
 
         $age = Carbon::parse($birthDate)->age;
-        $weight = $dietUser->weight;
+
+        // اگر وزن ارسال شد
+        if ($request->filled('weight')) {
+
+            $weight = $request->weight;
+
+            // بروزرسانی وزن کاربر
+            $dietUser->current_weight = $weight;
+            $dietUser->weight_updatedate = now();
+            $dietUser->save();
+
+        } else {
+
+            // اگر وزن ارسال نشد
+            $weight = $dietUser->current_weight;
+        }
+
         $height = $dietUser->height;
         $gender = $dietUser->gender;
 
