@@ -3213,6 +3213,22 @@
                         }
                     },
                     {
+                        "name": "weight_updatedate_from",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "example": 0
+                        }
+                    },
+                    {
+                        "name": "weight_updatedate_to",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "example": 10
+                        }
+                    },
+                    {
                         "name": "role",
                         "in": "query",
                         "description": "شناسه نقش برای فیلتر کاربران",

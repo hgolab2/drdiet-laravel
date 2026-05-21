@@ -627,6 +627,16 @@ class DietUserController extends Controller
      *         @OA\Schema(type="integer", example=10)
      *     ),
      *     @OA\Parameter(
+     *         name="weight_updatedate_from",
+     *         in="query",
+     *         @OA\Schema(type="integer", example=0)
+     *     ),
+     *     @OA\Parameter(
+     *         name="weight_updatedate_to",
+     *         in="query",
+     *         @OA\Schema(type="integer", example=10)
+     *     ),
+     *     @OA\Parameter(
      *         name="role",
      *         in="query",
      *         description="شناسه نقش برای فیلتر کاربران",
@@ -728,6 +738,54 @@ class DietUserController extends Controller
                 $subquery->select('model_id')
                     ->from('model_has_roles')
                     ->where('model_type', User::class);
+            });
+        }
+
+        // فیلتر بر اساس weight_updatedate
+        if ($request->filled('weight_updatedate_from') && $request->filled('weight_updatedate_to')) {
+            $weight_updatedateFrom = (int)$request->weight_updatedate_from;
+            $weight_updatedateTo = (int)$request->weight_updatedate_to;
+            if($weight_updatedateTo == 0 && $weight_updatedateFrom == 0) {
+                $query->where(function ($q) {
+                    $q->whereNull('weight_updatedate')
+                    ->orWhere(function ($q2) {
+                        $q2->whereNotNull('weight_updatedate')
+                            ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) <= 0');
+                    });
+                });
+
+            }
+            else
+            {
+                $query->where(function ($q) use ($weight_updatedateFrom , $weight_updatedateTo) {
+                    $q->/*whereNull('expire_at')
+                    ->or*/Where(function ($q2) use ($weight_updatedateFrom , $weight_updatedateTo) {
+                        $q2->whereNotNull('weight_updatedate')
+                            ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) <= ?', [$weight_updatedateTo])
+                            ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) >= ?', [$weight_updatedateFrom]);
+                    });
+                });
+
+            }
+        }
+        elseif($request->filled('weight_updatedate_from'))
+        {
+            $weight_updatedateFrom = (int)$request->weight_updatedate_from;
+            $query->where(function ($q) use ($weight_updatedateFrom) {
+                $q->Where(function ($q2) use ($weight_updatedateFrom) {
+                    $q2->whereNotNull('weight_updatedate')
+                        ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) >= ?', [$weight_updatedateFrom]);
+                });
+            });
+        }
+        elseif($request->filled('weight_updatedate_to'))
+        {
+            $weight_updatedateTo = (int)$request->weight_updatedate_to;
+            $query->where(function ($q) use ($weight_updatedateTo) {
+                $q->Where(function ($q2) use ($weight_updatedateTo) {
+                    $q2->whereNotNull('weight_updatedate')
+                        ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) <= ?', [$weight_updatedateTo]);
+                });
             });
         }
 
@@ -879,6 +937,8 @@ class DietUserController extends Controller
                 'height' => $user->height,
                 'weight' => $user->weight,
                 'target_weight' => $user->target_weight,
+                'current_weight' => $user->current_weight,
+                'weight_updatedate' => $user->weight_updatedate,
                 'wrist_size' => $user->wrist_size,
                 'pregnancy_week' => $user->pregnancy_week,
                 'country_id' => $user->country_id,
