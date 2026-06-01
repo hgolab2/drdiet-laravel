@@ -251,6 +251,53 @@ class DietMealController extends Controller
         ]);
     }
 
+    private function aiTextToHtml($text)
+    {
+        // بولدها
+        $text = preg_replace('/\*\*(.*?)\*\*/', '<h4>$1</h4>', $text);
+
+        // لیست‌ها
+        $lines = explode("\n", $text);
+
+        $html = '';
+        $inList = false;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (empty($line)) {
+                continue;
+            }
+
+            if (str_starts_with($line, '- ')) {
+
+                if (!$inList) {
+                    $html .= '<ul>';
+                    $inList = true;
+                }
+
+                $html .= '<li>' . substr($line, 2) . '</li>';
+            } else {
+
+                if ($inList) {
+                    $html .= '</ul>';
+                    $inList = false;
+                }
+
+                if (str_contains($line, '<h4>')) {
+                    $html .= $line;
+                } else {
+                    $html .= '<p>' . $line . '</p>';
+                }
+            }
+        }
+
+        if ($inList) {
+            $html .= '</ul>';
+        }
+
+        return $html;
+    }
 
     /**
      * @OA\Get(
@@ -281,7 +328,6 @@ class DietMealController extends Controller
             ->toArray();*/
 
 
-
         if(empty($meal->description)) {
             $mealNameAr = $meal->name;
             $Prompt = "
@@ -295,6 +341,7 @@ class DietMealController extends Controller
             ملاحظة هامة: إذا كانت الوجبة تتكون من عنصر واحد فقط (مثل: التمر أو التفاح)، اكتفِ بذكر \"الفوائد الصحية\" فقط وتجاهل الأقسام الأخرى.
             التنسيق: اجعل العناوين بارزة واللغة واضحة وبسيطة في اقل من 700 کاراکتر
             ";
+
             //dd(env('OPENAI_API_KEY'));
             $openAI = app(OpenAIService::class);
 
@@ -310,10 +357,9 @@ class DietMealController extends Controller
             ]);
 
             if ($aiDescription) {
-                $meal->description = $aiDescription;
+                $meal->description = $this->aiTextToHtml($aiDescription);
                 $meal->save();
             }
-            dd(1);
         }
 
         $output = [
