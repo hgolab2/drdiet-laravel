@@ -4137,7 +4137,6 @@
                                 "required": [
                                     "userId",
                                     "fromdate",
-                                    "todate",
                                     "weeklyId"
                                 ],
                                 "properties": {
@@ -4153,6 +4152,10 @@
                                     "weeklyId": {
                                         "type": "integer",
                                         "example": 2
+                                    },
+                                    "weight": {
+                                        "type": "integer",
+                                        "example": 85
                                     }
                                 },
                                 "type": "object"

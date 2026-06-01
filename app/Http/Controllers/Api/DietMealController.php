@@ -313,7 +313,7 @@ class DietMealController extends Controller
                 $meal->description = $aiDescription;
                 $meal->save();
             }
-
+            dd(1);
         }
 
         $output = [
