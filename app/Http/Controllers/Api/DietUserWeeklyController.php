@@ -225,7 +225,6 @@ class DietUserWeeklyController extends Controller
 
             }
         //});
-
         return response()->json(['message' => 'ثبت شد.'], 201);
     }
 
