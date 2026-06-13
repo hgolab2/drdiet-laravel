@@ -522,7 +522,7 @@ class DietMealController extends Controller
 
         ]);
 
-        $imageId = $meal->image_id; // نگه‌داری عکس قبلی
+        $imageId = $meal->imageId; // نگه‌داری عکس قبلی
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
