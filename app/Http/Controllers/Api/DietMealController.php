@@ -392,6 +392,7 @@ class DietMealController extends Controller
             'items' => $meal->items->map(fn($i) => [
                 'itemId' => $i->itemId,
                 'title' => $i->item->name ?? null,
+                'weightUnit' => $i->item->weightUnit ?? null,
                 'percent' => $i->percent
             ])
         ];
