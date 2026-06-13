@@ -160,6 +160,8 @@ Route::get('/diet-leads/{id}', [DietLeadController::class, 'show']);   // مشا
 Route::put('/diet-leads/{id}', [DietLeadController::class, 'update']); // ویرایش لید
 Route::delete('/diet-leads/{id}', [DietLeadController::class, 'destroy']); // حذف لید
 Route::post('/diet-leads/assign-expert', [DietLeadController::class, 'assignExpert']);
+Route::post('/diet-leads/assign-level-one', [DietLeadController::class, 'assignLevelOne']);
+Route::post('/diet-leads/{id}/increase-level', [DietLeadController::class, 'increaseLevel']);
 
 Route::get('/admin/diet-leads/source-report', [DietLeadController::class, 'sourceReport']);
 

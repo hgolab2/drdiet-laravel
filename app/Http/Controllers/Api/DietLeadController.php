@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Services\WhatsappService;
+use App\Services\OpenAIService;
 
 class DietLeadController extends Controller
 {
@@ -17,6 +18,54 @@ class DietLeadController extends Controller
         $query = str_replace(array('?'), array('\'%s\''), $item->toSql());
         return $query = vsprintf($query, $item->getBindings());
             //echo($query);
+    }
+
+    private function aiTextToHtml($text)
+    {
+        // بولدها
+        $text = preg_replace('/\*\*(.*?)\*\*/', '<h4>$1</h4>', $text);
+
+        // لیست‌ها
+        $lines = explode("\n", $text);
+
+        $html = '';
+        $inList = false;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if (empty($line)) {
+                continue;
+            }
+
+            if (str_starts_with($line, '- ')) {
+
+                if (!$inList) {
+                    $html .= '<ul>';
+                    $inList = true;
+                }
+
+                $html .= '<li>' . substr($line, 2) . '</li>';
+            } else {
+
+                if ($inList) {
+                    $html .= '</ul>';
+                    $inList = false;
+                }
+
+                if (str_contains($line, '<h4>')) {
+                    $html .= $line;
+                } else {
+                    $html .= '<p>' . $line . '</p>';
+                }
+            }
+        }
+
+        if ($inList) {
+            $html .= '</ul>';
+        }
+
+        return $html;
     }
 
     public function __construct(WhatsappService $whatsappService)
@@ -44,7 +93,245 @@ class DietLeadController extends Controller
         return $phone;
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/diet-leads/{id}/increase-level",
+     *     tags={"Diet Leads"},
+     *     summary="افزایش سطح لید",
+     *     description="سطح لید متعلق به کاربر لاگین شده را یک واحد افزایش داده و تاریخ سطح را بروزرسانی می‌کند.",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="شناسه لید",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="عملیات با موفقیت انجام شد"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="شما دسترسی به این لید ندارید"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="لید یافت نشد"
+     *     )
+     * )
+     */
+    public function increaseLevel($id)
+    {
+        $user = Auth::user();
 
+        $lead = DietLead::where('id', $id)
+            ->where('expert_id', $user->id)
+            ->first();
+
+        if (!$lead) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لید یافت نشد یا به شما تعلق ندارد.'
+            ], 404);
+        }
+
+        $lead->update([
+            'level' => $lead->level + 1,
+            'level_date' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'سطح لید با موفقیت افزایش یافت.',
+            'data' => $lead->fresh()
+        ]);
+    }
+
+
+    /**
+     * @OA\Post(
+     *     path="/api/diet-leads/assign-level-one",
+     *     tags={"Diet Leads"},
+     *     summary="دریافت لیدهای جدید",
+     *     description="در هر بار اجرا حداکثر 5 لید از سطح 0 به سطح 1 منتقل شده و به کاربر جاری تخصیص داده می‌شوند. سقف روزانه برای هر کاربر 30 لید است.",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="عملیات با موفقیت انجام شد"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="کاربر احراز هویت نشده است"
+     *     )
+     * )
+     */
+    public function assignLevelOne()
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی غیرمجاز.'
+            ], 401);
+        }
+
+        $todayCount = DietLead::where('expert_id', $user->id)
+            ->whereDate('level_date', today())
+            ->where('level', '>=', 1)
+            ->count();
+
+        if ($todayCount >= 30) {
+            return response()->json([
+                'success' => false,
+                'message' => 'سقف روزانه 30 لید برای شما تکمیل شده است.',
+                'updated_count' => 0
+            ]);
+        }
+
+        $remaining = 30 - $todayCount;
+        $limit = min(5, $remaining);
+
+        DB::beginTransaction();
+
+        try {
+
+            $leads = DietLead::where('level', 0)
+                ->whereNull('expert_id')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->limit($limit)
+                ->get();
+
+            if ($leads->isEmpty()) {
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'لید جدیدی موجود نیست.',
+                    'updated_count' => 0
+                ]);
+            }
+
+            $openAI = app(OpenAIService::class);
+
+            foreach ($leads as $lead) {
+
+                $bmi = null;
+
+                if (!empty($lead->height) && !empty($lead->weight)) {
+                    $bmi = round(
+                        $lead->weight / pow($lead->height / 100, 2),
+                        1
+                    );
+                }
+
+                $prompt = "
+            بناءً على معلومات هذا الزبون:
+
+            الاسم: {$lead->name}
+            الجنس: {$lead->gender}
+            العمر: {$lead->age}
+            الطول: {$lead->height} سم
+            الوزن: {$lead->weight} كغ
+            مؤشر كتلة الجسم الحالي: {$bmi}
+            الدولة: {$lead->country}
+
+            ملاحظات الزبون والحالة الصحية:
+
+            {$lead->notes}
+
+            إذا كانت الملاحظات تحتوي على أمراض أو أعراض أو أهداف صحية فاعتبرها المرجع الأساسي للتحليل.
+
+            أرجو كتابة ما يلي بإيجاز ودون أي مقدمات أو خاتمة:
+
+            الوزن الزائد:
+            الوزن الصحي:
+            الوزن المناسب:
+            وزن اللياقة:
+            مؤشر كتلة الجسم:
+
+            بناءً على المرض المذكور أو الأمراض المحتملة وفقاً للوزن والعمر والملاحظات:
+
+            الأعراض:
+            العلاج:
+            الأسباب:
+            مدة العلاج بالحمية:
+
+            ------
+
+            اكتب العلاقة بين حالة الشخص الصحية وبرنامجه الغذائي:
+
+            ------
+
+            ما هي النتائج والأحداث التي تحدث بعد فقدان الوزن والعلاج؟
+
+            ------
+
+            اكتب النتائج الظاهرية المتوقعة عند الاشتراك في البرنامج الغذائي.
+
+            قواعد مهمة:
+            - اكتب باللغة العربية فقط.
+            - استخدم أسلوب أخصائي تغذية محترف.
+            - لا تكتب أي مقدمة أو خاتمة.
+            - اجعل الإجابة مختصرة ومقنعة تسويقياً.
+            - لا تتجاوز 1200 حرف.
+            ";
+
+                $aiDescription = '';
+
+                try {
+
+                    $aiDescription = $openAI->chat([
+                        [
+                            'role' => 'system',
+                            'content' => 'You are a professional arabic dietitian and health analyst.'
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => $prompt
+                        ]
+                    ]);
+
+                } catch (\Exception $e) {
+
+                    \Log::error('Diet Lead AI Error', [
+                        'lead_id' => $lead->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+
+                $lead->update([
+                    'level'       => 1,
+                    'expert_id'   => $user->id,
+                    'level_date'  => now(),
+                    'description' => !empty($aiDescription)
+                        ? $this->aiTextToHtml($aiDescription)
+                        : null,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'لیدها با موفقیت تخصیص داده شدند.',
+                'updated_count' => $leads->count(),
+                'lead_ids' => $leads->pluck('id')->values()
+            ]);
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Assign expert to diet lead by WhatsApp number
@@ -513,6 +800,13 @@ class DietLeadController extends Controller
      *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Parameter(
+     *         name="level",
+     *         in="query",
+     *         description="سطح کاربر",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
      *         name="country",
      *         in="query",
      *         description="کشور",
@@ -549,6 +843,8 @@ class DietLeadController extends Controller
      *                     @OA\Property(property="expert", type="string"),
      *                     @OA\Property(property="created_at", type="string", format="date-time"),
      *                     @OA\Property(property="notes", type="string"),
+     *                     @OA\Property(property="level", type="integer"),
+     *                     @OA\Property(property="level_date", type="datetime"),
      *                 )
      *             ),
      *             @OA\Property(property="totalCount", type="integer")
@@ -579,9 +875,11 @@ class DietLeadController extends Controller
         if ($request->filled('age')) {
             $query->where('age', $request->age);
         }
+        if ($request->filled('level')) {
+            $query->where('level', $request->level);
+        }
         if ($request->filled('status')) {
-
-        if ($request->status == 0) {
+            if ($request->status == 0) {
                 $query->where(function ($q) {
                     $q->where('status', 0)
                     ->orWhereNull('status');
@@ -616,6 +914,9 @@ class DietLeadController extends Controller
                 'expert' => optional($user->expert)->fullname(),
                 'created_at' => $user->created_at,
                 'notes' => $user->notes,
+                'level' => $user->level,
+                'level_date' => $user->level_date,
+                'description' => $user->description,
             ];
         }, $users->items());
         return response()->json([
@@ -704,22 +1005,22 @@ class DietLeadController extends Controller
         $sourceName = $lead->source === 'di3t.club' ? 'di3t_club' : $lead->source;
 
         $message = "هلا وغلا
-معك الأخصائية {$expertName} من مركز {$sourceName}
+        معك الأخصائية {$expertName} من مركز {$sourceName}
 
-✅ وصلتني بياناتك كاملة
+        ✅ وصلتني بياناتك كاملة
 
-⚖️ الوزن: " . ($lead->weight ?? '-') . "
-📏 الطول: " . ($lead->height ?? '-') . "
-🗓 العمر: " . ($lead->age ?? '-') . "
-🩺 الحالة الصحية: " . ($lead->notes ?? '-') . "
+        ⚖️ الوزن: " . ($lead->weight ?? '-') . "
+        📏 الطول: " . ($lead->height ?? '-') . "
+        🗓 العمر: " . ($lead->age ?? '-') . "
+        🩺 الحالة الصحية: " . ($lead->notes ?? '-') . "
 
-لتأكيد والانتقال للخطوة التالية:
+        لتأكيد والانتقال للخطوة التالية:
 
-*أرسل الرقم 1*";
+        *أرسل الرقم 1*";
 
-// حذف کاراکترهای 4 بایتی (مثل emoji) برای جلوگیری از خطای MySQL
-$message = mb_convert_encoding($message, 'UTF-8', 'UTF-8'); // اطمینان از UTF-8
-$message = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $message);
+        // حذف کاراکترهای 4 بایتی (مثل emoji) برای جلوگیری از خطای MySQL
+        $message = mb_convert_encoding($message, 'UTF-8', 'UTF-8'); // اطمینان از UTF-8
+        $message = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $message);
 
         // --------------------
         // ارسال واتساپ

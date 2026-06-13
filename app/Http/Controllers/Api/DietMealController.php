@@ -674,8 +674,6 @@ class DietMealController extends Controller
         $imageId = null;
 
         if ($request->hasFile('image')) {
-            echo 'dddd';
-            exit;
             $file = $request->file('image');
             $token = Str::random(32);
             $extension = $file->getClientOriginalExtension();

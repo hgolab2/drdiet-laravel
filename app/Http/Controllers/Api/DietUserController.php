@@ -890,10 +890,10 @@ class DietUserController extends Controller
                 ->first();
 
             // 🟢 محاسبه روزهای باقی‌مانده فقط اگر todate در آینده باشد
-            $remainingDays = null;
+            $remainingDays = 0;
             if ($latestWeekly && $latestWeekly->todate) {
                 $diff = Carbon::today()->diffInDays(Carbon::parse($latestWeekly->todate), false);
-                $remainingDays = $diff > 0 ? $diff : null;
+                $remainingDays = $diff > 0 ? $diff : 0;
             }
             $exerciseProgram = ExerciseUsersProgram::where('user_id', $user->id)
             ->where('expire_at', '>=', date('Y-m-d'))

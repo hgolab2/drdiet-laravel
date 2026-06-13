@@ -121,9 +121,9 @@ class DietUserWeeklyController extends Controller
         $gender = $dietUser->gender;
 
         if ($gender === 'male') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
+            $bmr = (10 * $weight) + (6.25 * $height) - (5 * $age) + 5;
         } elseif ($gender === 'female') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
+            $bmr = (10 * $weight) + (6.25 * $height) - (5 * $age) - 161;
         } else {
             return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
         }

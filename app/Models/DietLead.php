@@ -45,6 +45,9 @@ class DietLead extends Model
         'expert_id',
         'notes',
         'ip_address',
+        'level',
+        'level_date',
+        'description'
     ];
 
     public function expert()

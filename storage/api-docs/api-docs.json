@@ -981,6 +981,67 @@
                 ]
             }
         },
+        "/api/diet-leads/{id}/increase-level": {
+            "post": {
+                "tags": [
+                    "Diet Leads"
+                ],
+                "summary": "افزایش سطح لید",
+                "description": "سطح لید متعلق به کاربر لاگین شده را یک واحد افزایش داده و تاریخ سطح را بروزرسانی می‌کند.",
+                "operationId": "11633fd0f6597074b18463e65a9d0356",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "شناسه لید",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "عملیات با موفقیت انجام شد"
+                    },
+                    "403": {
+                        "description": "شما دسترسی به این لید ندارید"
+                    },
+                    "404": {
+                        "description": "لید یافت نشد"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/diet-leads/assign-level-one": {
+            "post": {
+                "tags": [
+                    "Diet Leads"
+                ],
+                "summary": "دریافت لیدهای جدید",
+                "description": "در هر بار اجرا حداکثر 5 لید از سطح 0 به سطح 1 منتقل شده و به کاربر جاری تخصیص داده می‌شوند. سقف روزانه برای هر کاربر 30 لید است.",
+                "operationId": "7a6491fff1c5aa3f5174ee5c7ed10e2a",
+                "responses": {
+                    "200": {
+                        "description": "عملیات با موفقیت انجام شد"
+                    },
+                    "401": {
+                        "description": "کاربر احراز هویت نشده است"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/diet-leads/assign-expert": {
             "post": {
                 "tags": [
@@ -1495,6 +1556,15 @@
                         }
                     },
                     {
+                        "name": "level",
+                        "in": "query",
+                        "description": "سطح کاربر",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "country",
                         "in": "query",
                         "description": "کشور",
@@ -1572,6 +1642,13 @@
                                                     },
                                                     "notes": {
                                                         "type": "string"
+                                                    },
+                                                    "level": {
+                                                        "type": "integer"
+                                                    },
+                                                    "level_date": {
+                                                        "type": "string",
+                                                        "format": "date-time"
                                                     }
                                                 },
                                                 "type": "object"
@@ -8117,16 +8194,16 @@
             "description": "DietItem"
         },
         {
+            "name": "Diet Leads",
+            "description": "Diet Leads"
+        },
+        {
             "name": "DietLead",
             "description": "DietLead"
         },
         {
             "name": "Diet Leads Report",
             "description": "Diet Leads Report"
-        },
-        {
-            "name": "Diet Leads",
-            "description": "Diet Leads"
         },
         {
             "name": "MealType",
