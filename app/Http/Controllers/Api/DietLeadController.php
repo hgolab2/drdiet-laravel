@@ -14,6 +14,12 @@ class DietLeadController extends Controller
 {
     protected WhatsappService $whatsappService;
 
+    public function __construct(WhatsappService $whatsappService)
+    {
+        $this->middleware('auth:api')->except(['store' , 'edit']);;
+        $this->whatsappService = $whatsappService;
+    }
+
     function getQuery($item){
         $query = str_replace(array('?'), array('\'%s\''), $item->toSql());
         return $query = vsprintf($query, $item->getBindings());
@@ -68,11 +74,7 @@ class DietLeadController extends Controller
         return $html;
     }
 
-    public function __construct(WhatsappService $whatsappService)
-    {
-        $this->middleware('auth:api')->except(['store' , 'edit']);;
-        $this->whatsappService = $whatsappService;
-    }
+
 
     private function normalizePhone(string $phone): string
     {
@@ -124,6 +126,9 @@ class DietLeadController extends Controller
     public function increaseLevel($id)
     {
         $user = Auth::user();
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
         $lead = DietLead::where('id', $id)
             ->where('expert_id', $user->id)
@@ -169,13 +174,10 @@ class DietLeadController extends Controller
     public function assignLevelOne()
     {
         $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'دسترسی غیرمجاز.'
-            ], 401);
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
+
 
         $todayCount = DietLead::where('expert_id', $user->id)
             ->whereDate('level_date', today())

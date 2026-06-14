@@ -19,7 +19,6 @@ use App\Services\OpenAIService;
 use App\Models\DietWeeklyCulture;
 use Carbon\Carbon;
 
-
 class DietMealController extends Controller
 {
     public function __construct()
