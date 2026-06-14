@@ -872,6 +872,10 @@ class DietLeadController extends Controller
         if ($request->filled('gender')) {
             $query->where('gender', $request->gender);
         }
+        if ($request->filled('expert_id')) {
+            $query->where('expert_id', $request->expert_id);
+        }
+
         if ($request->filled('age')) {
             $query->where('age', $request->age);
         }
