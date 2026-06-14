@@ -199,6 +199,7 @@ class DietLeadController extends Controller
 
             $leads = DietLead::where('level', 0)
                 ->whereNull('expert_id')
+                ->where('user_status', 0)
                 ->orderByDesc('id')
                 ->lockForUpdate()
                 ->limit($limit)
