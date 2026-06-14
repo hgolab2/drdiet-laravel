@@ -1574,6 +1574,15 @@
                         }
                     },
                     {
+                        "name": "user_status",
+                        "in": "query",
+                        "description": "user_status",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "country",
                         "in": "query",
                         "description": "کشور",
