@@ -807,6 +807,13 @@ class DietLeadController extends Controller
      *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Parameter(
+     *         name="expert_id",
+     *         in="query",
+     *         description="شناسه کارشناس",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
      *         name="country",
      *         in="query",
      *         description="کشور",
