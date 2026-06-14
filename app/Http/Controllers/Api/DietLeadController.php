@@ -1160,10 +1160,13 @@ class DietLeadController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
+
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert', 'support', 'sales_expert'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+
         $lead = DietLead::findOrFail($id);
+
         $validator = Validator::make($request->all(), [
             'phone' => 'sometimes|required|string|max:20',
             'gender' => 'nullable|in:male,female',
@@ -1177,12 +1180,22 @@ class DietLeadController extends Controller
             'user_status' => 'nullable|integer',
             'expert_id' => 'nullable',
             'notes' => 'nullable|string',
+            'level' => 'nullable|integer',
         ]);
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-        $lead->update($validator->validated());
-        return response()->json($lead);
+
+        $data = $validator->validated();
+
+        if ($request->has('level')) {
+            $data['level_date'] = now();
+        }
+
+        $lead->update($data);
+
+        return response()->json($lead->fresh());
     }
 
     /**
