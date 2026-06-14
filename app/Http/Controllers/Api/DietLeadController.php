@@ -814,6 +814,13 @@ class DietLeadController extends Controller
      *         @OA\Schema(type="integer")
      *     ),
      *     @OA\Parameter(
+     *         name="user_status",
+     *         in="query",
+     *         description="user_status",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
      *         name="country",
      *         in="query",
      *         description="کشور",
@@ -882,7 +889,9 @@ class DietLeadController extends Controller
         if ($request->filled('expert_id')) {
             $query->where('expert_id', $request->expert_id);
         }
-
+        if ($request->filled('user_status')) {
+            $query->where('user_status', $request->user_status);
+        }
         if ($request->filled('age')) {
             $query->where('age', $request->age);
         }
