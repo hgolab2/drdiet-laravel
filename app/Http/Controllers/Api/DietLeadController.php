@@ -878,7 +878,7 @@ class DietLeadController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $pageSize = (int)($request->pagesize ?? 20);
