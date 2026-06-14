@@ -1160,7 +1160,7 @@ class DietLeadController extends Controller
     public function update(Request $request, $id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $lead = DietLead::findOrFail($id);
