@@ -265,7 +265,6 @@ class DietUserWeeklyController extends Controller
             $user->current_weight = $weight;
             $user->weight_updatedate = now();
             $user->save();
-
         }
         else
         {
@@ -273,29 +272,40 @@ class DietUserWeeklyController extends Controller
             $weight = $user->current_weight;
         }
 
+        $lastWeeklyId = DietUserWeekly::where('userId', $user->id)
+            ->latest('id')
+            ->value('weeklyId');
+
         if($user->food_type_id == 1)
         {
-            $weekly = DietWeekly::from('diet_weekly as dw')
-            ->where('food_type_id', $user->food_type_id)
+            $baseQuery = DietWeekly::from('diet_weekly as dw')
+            ->where('type', 'admin')
             ->join('diet_weekly_types as dwt', 'dw.id', '=', 'dwt.diet_weekly_id')
             ->join('diet_weekly_cultures as dwc', 'dw.id', '=', 'dwc.diet_weekly_id')
             ->where('dwt.type_id', $user->diet_type_id)
-            ->where('dwc.food_culture_id', $user->food_culture)
-            ->inRandomOrder()
-            ->select('dw.*')->first();
+            ->where('dwc.food_culture_id', $user->food_culture);
         }
         else
         {
-            $weekly = DietWeekly::from('diet_weekly as dw')
-            ->where('food_type_id', $user->food_type_id)
+            $baseQuery = DietWeekly::from('diet_weekly as dw')
+            ->where('type', 'admin')
             ->join('diet_weekly_types as dwt', 'dw.id', '=', 'dwt.diet_weekly_id')
             ->join('diet_weekly_cultures as dwc', 'dw.id', '=', 'dwc.diet_weekly_id')
-            ->where('dwt.type_id', $user->diet_type_id)
-            ->inRandomOrder()
-            ->select('dw.*')->first();
+            ->where('dwt.type_id', $user->diet_type_id);
         }
-        //dd($weekly);
 
+        $weekly = null;
+        if ($lastWeeklyId) {
+            $weekly = (clone $baseQuery)
+                ->where('dw.id', '!=', $lastWeeklyId)
+                ->inRandomOrder()
+                ->select('dw.*')->first();
+        }
+        if (!$weekly) {
+            $weekly = (clone $baseQuery)
+                ->inRandomOrder()
+                ->select('dw.*')->first();
+        }
 
         if($weekly != null)
         {

@@ -942,6 +942,7 @@ class DietLeadController extends Controller
                 'description' => $user->description,
             ];
         }, $users->items());
+
         return response()->json([
             'result' => $users,
             'totalCount' => $totalCount,
