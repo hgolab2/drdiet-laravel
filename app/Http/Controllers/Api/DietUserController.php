@@ -891,9 +891,18 @@ class DietUserController extends Controller
 
             // 🟢 محاسبه روزهای باقی‌مانده فقط اگر todate در آینده باشد
             $remainingDays = 0;
+            $remainingHours = 0;
+
             if ($latestWeekly && $latestWeekly->todate) {
-                $diff = Carbon::today()->diffInDays(Carbon::parse($latestWeekly->todate), false);
-                $remainingDays = $diff > 0 ? $diff : 0;
+                $now = Carbon::now();
+                $toDate = Carbon::parse($latestWeekly->todate);
+
+                if ($toDate->greaterThan($now)) {
+                    $interval = $now->diff($toDate);
+
+                    $remainingDays = $interval->days;
+                    $remainingHours = $interval->h;
+                }
             }
             $exerciseProgram = ExerciseUsersProgram::where('user_id', $user->id)
             ->where('expire_at', '>=', date('Y-m-d'))
@@ -959,6 +968,7 @@ class DietUserController extends Controller
                 'subscription_day' => $subscriptionDay,
                 'roles' => $roles,
                 'remaining_days' => $remainingDays,
+                'remaining_hours' => $remainingHours,
                 'has_exercise_program' => !is_null($programs),
                 'programs' => $programs,
                 'loginLink' => 'https://di3t-club.com/login/callback-email?token=' . $user->login_token
@@ -1135,9 +1145,18 @@ class DietUserController extends Controller
 
         // 🟢 محاسبه روزهای باقی‌مانده فقط اگر todate در آینده باشد
         $remainingDays = null;
+        $remainingHours = null;
+
         if ($latestWeekly && $latestWeekly->todate) {
-            $diff = Carbon::today()->diffInDays(Carbon::parse($latestWeekly->todate), false);
-            $remainingDays = $diff > 0 ? $diff : null;
+            $now = Carbon::now();
+            $toDate = Carbon::parse($latestWeekly->todate);
+
+            if ($toDate->greaterThan($now)) {
+                $interval = $now->diff($toDate);
+
+                $remainingDays = $interval->days;
+                $remainingHours = $interval->h;
+            }
         }
 
         $exerciseProgram = ExerciseUsersProgram::where('user_id', $id)
@@ -1242,6 +1261,7 @@ class DietUserController extends Controller
             'roles' => $roles,
             'subscription_day' => $subscriptionDay,
             'remaining_days' => $remainingDays,
+            'remaining_days' => $remainingHours,
             'has_exercise_program' => !is_null($programs),
             'programs' => $programs,
             //'ai_description' => $item->ai_description,
