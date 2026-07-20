@@ -981,7 +981,6 @@ class DietUserController extends Controller
         ]);
     }
 
-
     /**
      * @OA\Get(
      *     path="/api/diet-users/{id}",
