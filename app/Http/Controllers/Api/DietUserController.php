@@ -900,7 +900,7 @@ class DietUserController extends Controller
                 if ($toDate->greaterThan($now)) {
                     $interval = $now->diff($toDate);
 
-                    $remainingDays = $interval->days;
+                    $remainingDays = (int)$interval->days;
                     $remainingHours = $interval->h;
                 }
             }
