@@ -894,16 +894,20 @@ class DietUserController extends Controller
             $remainingHours = 0;
 
             if ($latestWeekly && $latestWeekly->todate) {
-                $now = Carbon::now();
-                $toDate = Carbon::parse($latestWeekly->todate);
-
-                if ($toDate->greaterThan($now)) {
-                    $interval = $now->diff($toDate);
-
-                    $remainingDays = (int)$interval->days;
-                    $remainingHours = $interval->h;
-                }
+                $diff = Carbon::today()->diffInDays(Carbon::parse($latestWeekly->todate), false);
+                $remainingDays = $diff > 0 ? $diff : null;
             }
+            // if ($latestWeekly && $latestWeekly->todate) {
+            //     $now = Carbon::now();
+            //     $toDate = Carbon::parse($latestWeekly->todate);
+
+            //     if ($toDate->greaterThan($now)) {
+            //         $interval = $now->diff($toDate);
+
+            //         $remainingDays = (int)$interval->days;
+            //         $remainingHours = $interval->h;
+            //     }
+            // }
             $exerciseProgram = ExerciseUsersProgram::where('user_id', $user->id)
             ->where('expire_at', '>=', date('Y-m-d'))
             ->orderByDesc('id')
