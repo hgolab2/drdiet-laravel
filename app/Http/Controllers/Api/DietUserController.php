@@ -750,7 +750,7 @@ class DietUserController extends Controller
                     $q->whereNull('weight_updatedate')
                     ->orWhere(function ($q2) {
                         $q2->whereNotNull('weight_updatedate')
-                            ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) <= 0');
+                            ->whereRaw('DATEDIFF(CURDATE() , weight_updatedate) <= 0');
                     });
                 });
 
@@ -761,8 +761,8 @@ class DietUserController extends Controller
                     $q->/*whereNull('expire_at')
                     ->or*/Where(function ($q2) use ($weight_updatedateFrom , $weight_updatedateTo) {
                         $q2->whereNotNull('weight_updatedate')
-                            ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) <= ?', [$weight_updatedateTo])
-                            ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) >= ?', [$weight_updatedateFrom]);
+                            ->whereRaw('DATEDIFF(CURDATE() , weight_updatedate) <= ?', [$weight_updatedateTo])
+                            ->whereRaw('DATEDIFF(CURDATE() , weight_updatedate) >= ?', [$weight_updatedateFrom]);
                     });
                 });
 
@@ -774,7 +774,7 @@ class DietUserController extends Controller
             $query->where(function ($q) use ($weight_updatedateFrom) {
                 $q->Where(function ($q2) use ($weight_updatedateFrom) {
                     $q2->whereNotNull('weight_updatedate')
-                        ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) >= ?', [$weight_updatedateFrom]);
+                        ->whereRaw('DATEDIFF(CURDATE() , weight_updatedate) >= ?', [$weight_updatedateFrom]);
                 });
             });
         }
@@ -784,7 +784,7 @@ class DietUserController extends Controller
             $query->where(function ($q) use ($weight_updatedateTo) {
                 $q->Where(function ($q2) use ($weight_updatedateTo) {
                     $q2->whereNotNull('weight_updatedate')
-                        ->whereRaw('DATEDIFF(weight_updatedate, CURDATE()) <= ?', [$weight_updatedateTo]);
+                        ->whereRaw('DATEDIFF(CURDATE() , weight_updatedate) <= ?', [$weight_updatedateTo]);
                 });
             });
         }
