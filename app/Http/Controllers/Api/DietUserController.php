@@ -750,7 +750,7 @@ class DietUserController extends Controller
                     $q->whereNull('weight_updatedate')
                     ->orWhere(function ($q2) {
                         $q2->whereNotNull('weight_updatedate')
-                            ->whereRaw('DATEDIFF(CURDATE() , weight_updatedate) <= 0');
+                            ->whereRaw('DATEDIFF(weight_updatedate , CURDATE()) <= 0');
                     });
                 });
 
