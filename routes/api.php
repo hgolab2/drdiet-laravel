@@ -170,7 +170,7 @@ Route::post('/diet-leads/assign-expert', [DietLeadController::class, 'assignExpe
 Route::post('/diet-leads/assign-level-one', [DietLeadController::class, 'assignLevelOne']);
 Route::post('/diet-leads/{id}/increase-level', [DietLeadController::class, 'increaseLevel']);
 Route::middleware('auth:api')->group(function () {
-    Route::get('/diet-leads/statistics', [DietLeadController::class, 'statistics']);
+    Route::get('/diet-leads-statistics', [DietLeadController::class, 'statistics']);
 });
 
 Route::get('/admin/diet-leads/source-report', [DietLeadController::class, 'sourceReport']);

@@ -1222,7 +1222,7 @@ class DietLeadController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/diet-leads/statistics",
+     *     path="/api/diet-leads-statistics",
      *     operationId="dietLeadStatistics",
      *     tags={"Diet Leads"},
      *     summary="Diet Leads Statistics",

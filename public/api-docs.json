@@ -1970,7 +1970,7 @@
                 }
             }
         },
-        "/api/diet-leads/statistics": {
+        "/api/diet-leads-statistics": {
             "get": {
                 "tags": [
                     "Diet Leads"
