@@ -17,7 +17,14 @@ use App\Http\Controllers\Api\ExerciseController;
 use App\Http\Controllers\Api\ExerciseProgramController;
 use App\Http\Controllers\Api\ExerciseUsersProgramController;
 use App\Http\Controllers\Api\MessageController;
-
+use App\Http\Controllers\Api\DeviceTokenController;
+use App\Http\Controllers\Api\UserVisitLogController;
+Route::middleware('auth:api')->group(function () {
+    Route::post('/device-token', [DeviceTokenController::class, 'store']);
+    Route::delete('/device-token', [DeviceTokenController::class, 'destroy']);
+    Route::post('/user-visit-logs', [UserVisitLogController::class, 'store']);
+    Route::get('/user-visit-logs/report', [UserVisitLogController::class, 'report']);
+});
 Route::get('/exercise-users-programs', [ExerciseUsersProgramController::class, 'index']);
 Route::post('/exercise-users-programs', [ExerciseUsersProgramController::class, 'store']);
 Route::get('/exercise-users-programs/{id}', [ExerciseUsersProgramController::class, 'show']);
@@ -162,6 +169,9 @@ Route::delete('/diet-leads/{id}', [DietLeadController::class, 'destroy']); // ح
 Route::post('/diet-leads/assign-expert', [DietLeadController::class, 'assignExpert']);
 Route::post('/diet-leads/assign-level-one', [DietLeadController::class, 'assignLevelOne']);
 Route::post('/diet-leads/{id}/increase-level', [DietLeadController::class, 'increaseLevel']);
+Route::middleware('auth:api')->group(function () {
+    Route::get('/diet-leads/statistics', [DietLeadController::class, 'statistics']);
+});
 
 Route::get('/admin/diet-leads/source-report', [DietLeadController::class, 'sourceReport']);
 
@@ -169,5 +179,4 @@ Route::post('/ai/generate', [DietUserController::class, 'generate']);
 
 Route::post('/webhook/whatsapp', [MessageController::class, 'handle']);
 Route::post('/whatsapp/send-message', [MessageController::class, 'sendMessage']);
-
 

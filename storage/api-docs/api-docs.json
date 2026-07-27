@@ -1970,6 +1970,78 @@
                 }
             }
         },
+        "/api/diet-leads/statistics": {
+            "get": {
+                "tags": [
+                    "Diet Leads"
+                ],
+                "summary": "Diet Leads Statistics",
+                "operationId": "dietLeadStatistics",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Statistic Type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "count",
+                                "gender",
+                                "age",
+                                "disease"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Predefined Period",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "today",
+                                "yesterday",
+                                "week",
+                                "month",
+                                "year"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-01-01"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-01-31"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/meal-types": {
             "get": {
                 "tags": [
@@ -7866,6 +7938,226 @@
                 ]
             }
         },
+        "/api/user-visit-logs": {
+            "post": {
+                "tags": [
+                    "User Visit Logs"
+                ],
+                "summary": "Store authenticated user visit log",
+                "operationId": "402815ee7cfb61bb71c4f3e2ac437504",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "page_url"
+                                ],
+                                "properties": {
+                                    "page_url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "example": "https://drdietapp.com/dashboard"
+                                    },
+                                    "page_path": {
+                                        "type": "string",
+                                        "maxLength": 1024,
+                                        "example": "/dashboard",
+                                        "nullable": true
+                                    },
+                                    "page_title": {
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Dashboard",
+                                        "nullable": true
+                                    },
+                                    "referrer_url": {
+                                        "type": "string",
+                                        "maxLength": 2048,
+                                        "example": "https://drdietapp.com/login",
+                                        "nullable": true
+                                    },
+                                    "metadata": {
+                                        "type": "object",
+                                        "example": {
+                                            "source": "web",
+                                            "locale": "fa"
+                                        },
+                                        "nullable": true
+                                    },
+                                    "visited_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-27T12:00:00Z",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User visit log saved.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User visit log saved."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "user_id": {
+                                                    "type": "integer",
+                                                    "example": 23
+                                                },
+                                                "page_url": {
+                                                    "type": "string",
+                                                    "example": "https://drdietapp.com/dashboard"
+                                                },
+                                                "page_path": {
+                                                    "type": "string",
+                                                    "example": "/dashboard",
+                                                    "nullable": true
+                                                },
+                                                "page_title": {
+                                                    "type": "string",
+                                                    "example": "Dashboard",
+                                                    "nullable": true
+                                                },
+                                                "referrer_url": {
+                                                    "type": "string",
+                                                    "example": "https://drdietapp.com/login",
+                                                    "nullable": true
+                                                },
+                                                "ip_address": {
+                                                    "type": "string",
+                                                    "example": "192.168.1.10",
+                                                    "nullable": true
+                                                },
+                                                "user_agent": {
+                                                    "type": "string",
+                                                    "example": "Mozilla/5.0",
+                                                    "nullable": true
+                                                },
+                                                "metadata": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "source": "web",
+                                                        "locale": "fa"
+                                                    },
+                                                    "nullable": true
+                                                },
+                                                "visited_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-07-27T12:00:00Z"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-07-27T12:00:00Z"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-07-27T12:00:00Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user-visit-logs/report": {
+            "get": {
+                "tags": [
+                    "User Visit Logs"
+                ],
+                "summary": "Get authenticated user visit report by date range",
+                "operationId": "8835929d4b0ed2afe1b874122c83a9d7",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start date",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-07-01"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End date",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-07-27"
+                        }
+                    },
+                    {
+                        "name": "group_by",
+                        "in": "query",
+                        "description": "Report period",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "day",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month",
+                                "year"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User visit report"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/getuser": {
             "get": {
                 "tags": [
@@ -8302,6 +8594,10 @@
         {
             "name": "Subscriptions",
             "description": "Subscriptions"
+        },
+        {
+            "name": "User Visit Logs",
+            "description": "User Visit Logs"
         },
         {
             "name": "Auth",

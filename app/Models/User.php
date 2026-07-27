@@ -6,6 +6,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Permission\Traits\HasRoles;
 
 
@@ -80,11 +81,20 @@ class User extends Authenticatable
     {
         return $this->hasAnyRole('super_admin') ? true : false;
     }
-    // روابط
+    // Ã˜Â±Ã™Ë†Ã˜Â§Ã˜Â¨Ã˜Â·
     public function dietUserWeeklies()
     {
         return $this->hasMany(DietUserWeekly::class, 'userId');
     }
-
-
+    /**
+     * Get the user's registered device tokens.
+     */
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+    public function visitLogs(): HasMany
+    {
+        return $this->hasMany(UserVisitLog::class);
+    }
 }

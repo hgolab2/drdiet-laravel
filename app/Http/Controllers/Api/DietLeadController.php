@@ -1219,4 +1219,196 @@ class DietLeadController extends Controller
         $lead->delete();
         return response()->json(['message' => 'حذف شد']);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/diet-leads/statistics",
+     *     operationId="dietLeadStatistics",
+     *     tags={"Diet Leads"},
+     *     summary="Diet Leads Statistics",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *          name="type",
+     *          in="query",
+     *          required=true,
+     *          description="Statistic Type",
+     *          @OA\Schema(type="string", enum={"count","gender","age","disease"})
+     *     ),
+     *
+     *     @OA\Parameter(
+     *          name="period",
+     *          in="query",
+     *          required=false,
+     *          description="Predefined Period",
+     *          @OA\Schema(type="string", enum={"today","yesterday","week","month","year"})
+     *     ),
+     *
+     *     @OA\Parameter(
+     *          name="date_from",
+     *          in="query",
+     *          required=false,
+     *          @OA\Schema(type="string", format="date", example="2026-01-01")
+     *     ),
+     *
+     *     @OA\Parameter(
+     *          name="date_to",
+     *          in="query",
+     *          required=false,
+     *          @OA\Schema(type="string", format="date", example="2026-01-31")
+     *     ),
+     *
+     *     @OA\Response(
+     *          response=200,
+     *          description="Success"
+     *     )
+     * )
+     */
+    public function statistics(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|in:count,gender,age,disease',
+            'period' => 'nullable|in:today,yesterday,week,month,year',
+            'date_from' => 'nullable|date|required_with:date_to',
+            'date_to' => 'nullable|date|required_with:date_from|after_or_equal:date_from',
+        ]);
+
+        $query = DietLead::query();
+
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+
+            $query->whereBetween('created_at', [
+                $request->date_from . ' 00:00:00',
+                $request->date_to . ' 23:59:59'
+            ]);
+
+        } else {
+
+            switch ($request->period) {
+
+                case 'today':
+                    $query->whereDate('created_at', today());
+                    break;
+
+                case 'yesterday':
+                    $query->whereDate('created_at', today()->subDay());
+                    break;
+
+                case 'week':
+                    $query->whereBetween('created_at', [
+                        now()->startOfWeek(),
+                        now()->endOfWeek()
+                    ]);
+                    break;
+
+                case 'month':
+                    $query->whereYear('created_at', now()->year)
+                        ->whereMonth('created_at', now()->month);
+                    break;
+
+                case 'year':
+                    $query->whereYear('created_at', now()->year);
+                    break;
+            }
+        }
+
+        return match ($request->type) {
+            'count' => $this->countStatistics($query),
+            'gender' => $this->genderStatistics($query),
+            'age' => $this->ageStatistics($query),
+            'disease' => $this->diseaseStatistics($query),
+        };
+    }
+    private function countStatistics($query)
+    {
+        return response()->json([
+            'total' => $query->count()
+        ]);
+    }
+    private function genderStatistics($query)
+    {
+        $data = $query
+            ->selectRaw('LOWER(gender) as gender, COUNT(*) as total')
+            ->groupBy('gender')
+            ->pluck('total', 'gender');
+
+        return response()->json([
+            'male' => (int)($data['male'] ?? 0),
+            'female' => (int)($data['female'] ?? 0),
+        ]);
+    }
+    private function diseaseStatistics($query)
+    {
+        $diseases = [
+            'آلام المفاصل',
+            'تکیس',
+            'سكري',
+            'ضغط',
+            'خمول',
+            'قولون',
+            'کرش',
+            'حمل و رضاعة',
+            'رشاقة',
+            'امساك',
+            'نشاط الغده الدرقيه',
+            'جرثومه معدة والتهاب حاد في جدار المعده',
+        ];
+
+        $result = array_fill_keys($diseases, 0);
+
+        $notes = $query
+            ->whereNotNull('notes')
+            ->where('notes', '<>', '')
+            ->pluck('notes');
+
+        foreach ($notes as $note) {
+
+            // حذف توضیحات بعد از -
+            $text = explode('-', $note, 2)[0];
+            $text = trim($text);
+
+            if ($text === '' || $text === 'ليس لدي مشكلة.') {
+                continue;
+            }
+
+            foreach (explode('،', $text) as $item) {
+
+                $item = preg_replace('/\s+/u', ' ', trim($item));
+
+                if (array_key_exists($item, $result)) {
+                    $result[$item]++;
+                }
+            }
+        }
+
+        $response = collect($result)
+            ->map(fn ($count, $name) => [
+                'name' => $name,
+                'count' => $count,
+            ])
+            ->sortByDesc('count')
+            ->values();
+
+        return response()->json($response);
+    }
+    private function ageStatistics($query)
+    {
+        $result = $query->selectRaw("
+            SUM(CASE WHEN age < 18 THEN 1 ELSE 0 END) under_18,
+            SUM(CASE WHEN age BETWEEN 18 AND 25 THEN 1 ELSE 0 END) age_18_25,
+            SUM(CASE WHEN age BETWEEN 26 AND 35 THEN 1 ELSE 0 END) age_26_35,
+            SUM(CASE WHEN age BETWEEN 36 AND 45 THEN 1 ELSE 0 END) age_36_45,
+            SUM(CASE WHEN age BETWEEN 46 AND 60 THEN 1 ELSE 0 END) age_46_60,
+            SUM(CASE WHEN age > 60 THEN 1 ELSE 0 END) age_60_plus
+        ")->first();
+
+        return response()->json([
+            'under_18' => (int)$result->under_18,
+            '18_25' => (int)$result->age_18_25,
+            '26_35' => (int)$result->age_26_35,
+            '36_45' => (int)$result->age_36_45,
+            '46_60' => (int)$result->age_46_60,
+            '60_plus' => (int)$result->age_60_plus,
+        ]);
+    }
 }
