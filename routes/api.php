@@ -22,9 +22,9 @@ use App\Http\Controllers\Api\UserVisitLogController;
 Route::middleware('auth:api')->group(function () {
     Route::post('/device-token', [DeviceTokenController::class, 'store']);
     Route::delete('/device-token', [DeviceTokenController::class, 'destroy']);
-    Route::post('/user-visit-logs', [UserVisitLogController::class, 'store']);
     Route::get('/user-visit-logs/report', [UserVisitLogController::class, 'report']);
 });
+Route::post('/user-visit-logs', [UserVisitLogController::class, 'store']);
 Route::get('/exercise-users-programs', [ExerciseUsersProgramController::class, 'index']);
 Route::post('/exercise-users-programs', [ExerciseUsersProgramController::class, 'store']);
 Route::get('/exercise-users-programs/{id}', [ExerciseUsersProgramController::class, 'show']);

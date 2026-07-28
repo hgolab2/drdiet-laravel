@@ -7943,7 +7943,7 @@
                 "tags": [
                     "User Visit Logs"
                 ],
-                "summary": "Store authenticated user visit log",
+                "summary": "Store user visit log",
                 "operationId": "402815ee7cfb61bb71c4f3e2ac437504",
                 "requestBody": {
                     "required": true,
@@ -8016,7 +8016,8 @@
                                                 },
                                                 "user_id": {
                                                     "type": "integer",
-                                                    "example": 23
+                                                    "example": 23,
+                                                    "nullable": true
                                                 },
                                                 "page_url": {
                                                     "type": "string",
@@ -8079,18 +8080,10 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
                     "422": {
                         "description": "Validation error"
                     }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/user-visit-logs/report": {

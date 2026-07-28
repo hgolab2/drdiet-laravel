@@ -20,9 +20,8 @@ class UserVisitLogController extends Controller
     /**
      * @OA\Post(
      *     path="/api/user-visit-logs",
-     *     summary="Store authenticated user visit log",
+     *     summary="Store user visit log",
      *     tags={"User Visit Logs"},
-     *     security={{"bearerAuth": {}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -49,7 +48,7 @@ class UserVisitLogController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="user_id", type="integer", example=23),
+     *                 @OA\Property(property="user_id", type="integer", nullable=true, example=23),
      *                 @OA\Property(property="page_url", type="string", example="https://drdietapp.com/dashboard"),
      *                 @OA\Property(property="page_path", type="string", nullable=true, example="/dashboard"),
      *                 @OA\Property(property="page_title", type="string", nullable=true, example="Dashboard"),
@@ -63,7 +62,6 @@ class UserVisitLogController extends Controller
      *             )
      *         )
      *     ),
-     *     @OA\Response(response=401, description="Unauthorized"),
      *     @OA\Response(response=422, description="Validation error")
      * )
      */
