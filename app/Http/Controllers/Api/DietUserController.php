@@ -20,6 +20,7 @@ use App\Enums\ExerciseLocations;
 use App\Enums\MealType;
 use App\Enums\FoodType;
 use App\Models\ExerciseUsersProgram;
+use App\Models\Subscription;
 use Illuminate\Support\Str;
 use App\Services\OpenAIService;
 use Illuminate\Http\JsonResponse;
@@ -1143,6 +1144,10 @@ class DietUserController extends Controller
 
         $roles = $item->getRoleNames();
         $subscriptionDay = $item->expire_at ? Carbon::parse($item->expire_at)->diffInDays(Carbon::today(), false) : null;
+        $registrationType = Subscription::where('status', 'active')
+            ->where('user_id', $item->id)
+            ->orderByDesc('id')
+            ->value('registration_type');
 
         // 🟡 آخرین رکورد رژیم هفتگی کاربر
         $latestWeekly = \App\Models\DietUserWeekly::where('userId', $item->id)
@@ -1273,6 +1278,7 @@ class DietUserController extends Controller
             'weights' => $weights,
             'roles' => $roles,
             'subscription_day' => $subscriptionDay,
+            'registration_type' => $registrationType,
             'remaining_days' => $remainingDays,
             'remainingHours' => $remainingHours,
             'has_exercise_program' => !is_null($programs),

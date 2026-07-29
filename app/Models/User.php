@@ -81,7 +81,7 @@ class User extends Authenticatable
     {
         return $this->hasAnyRole('super_admin') ? true : false;
     }
-    // Ã˜Â±Ã™Ë†Ã˜Â§Ã˜Â¨Ã˜Â·
+
     public function dietUserWeeklies()
     {
         return $this->hasMany(DietUserWeekly::class, 'userId');

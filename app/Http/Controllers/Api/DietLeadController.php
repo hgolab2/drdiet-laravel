@@ -525,7 +525,7 @@ class DietLeadController extends Controller
 
         //if ($user->isAdmin()) {
 
-            $experts = DietLead::query()
+        /*    $experts = DietLead::query()
                 ->join('diet_users', 'diet_users.id', '=', 'diet_leads.expert_id')
                 ->select(
 
@@ -547,7 +547,7 @@ class DietLeadController extends Controller
                 ->get();
             //echo $this->getQuery($experts);
             //exit;
-            $results = $results->merge($experts);
+            $results = $results->merge($experts);*/
         //}
 
         return $results->sortByDesc('total')->values();
