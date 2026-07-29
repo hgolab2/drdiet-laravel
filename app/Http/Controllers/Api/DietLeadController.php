@@ -493,9 +493,9 @@ class DietLeadController extends Controller
         // =========================
         $sourceQuery = DietLead::query();
 
-        if (!$user->isAdmin()) {
+        /*if (!$user->isAdmin()) {
             $sourceQuery->where('expert_id', $user->id);
-        }
+        }*/
 
         $sources = $sourceQuery->select(
 
@@ -523,7 +523,7 @@ class DietLeadController extends Controller
         // =========================
         // echo $user->isAdmin();
 
-        if ($user->isAdmin()) {
+        //if ($user->isAdmin()) {
 
             $experts = DietLead::query()
                 ->join('diet_users', 'diet_users.id', '=', 'diet_leads.expert_id')
@@ -548,7 +548,7 @@ class DietLeadController extends Controller
             //echo $this->getQuery($experts);
             //exit;
             $results = $results->merge($experts);
-        }
+        //}
 
         return $results->sortByDesc('total')->values();
     }
