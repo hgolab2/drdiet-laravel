@@ -459,6 +459,9 @@ class DietLeadController extends Controller
      *                 @OA\Property(property="today_total", type="integer", example=5),
      *                 @OA\Property(property="today_not_contacted", type="integer", example=2),
      *
+     *                 @OA\Property(property="yesterday_total", type="integer", example=7),
+     *                 @OA\Property(property="yesterday_not_contacted", type="integer", example=3),
+     *
      *                 @OA\Property(property="week_total", type="integer", example=18),
      *                 @OA\Property(property="week_not_contacted", type="integer", example=6),
      *
@@ -481,6 +484,7 @@ class DietLeadController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $today = Carbon::today()->toDateString();
+        $yesterday = Carbon::yesterday()->toDateString();
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
         $monthStart = Carbon::now()->startOfMonth()->toDateTimeString();
 
@@ -506,6 +510,9 @@ class DietLeadController extends Controller
 
                 DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' THEN 1 ELSE 0 END) as today_total"),
                 DB::raw("SUM(CASE WHEN DATE(created_at) = '{$today}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as today_not_contacted"),
+
+                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$yesterday}' THEN 1 ELSE 0 END) as yesterday_total"),
+                DB::raw("SUM(CASE WHEN DATE(created_at) = '{$yesterday}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as yesterday_not_contacted"),
 
                 DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' THEN 1 ELSE 0 END) as week_total"),
                 DB::raw("SUM(CASE WHEN created_at >= '{$weekStart}' AND (status = 0 OR status IS NULL) THEN 1 ELSE 0 END) as week_not_contacted"),
