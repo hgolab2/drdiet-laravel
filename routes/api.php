@@ -20,10 +20,14 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\UserVisitLogController;
 use App\Http\Controllers\Api\SiteSettingController;
+use App\Http\Controllers\Api\UserPerformanceNoteController;
 Route::middleware('auth:api')->group(function () {
     Route::post('/device-token', [DeviceTokenController::class, 'store']);
     Route::delete('/device-token', [DeviceTokenController::class, 'destroy']);
     Route::get('/user-visit-logs/report', [UserVisitLogController::class, 'report']);
+    Route::get('/user-performance-notes', [UserPerformanceNoteController::class, 'index']);
+    Route::get('/users/{user}/performance-notes', [UserPerformanceNoteController::class, 'userNotes']);
+    Route::post('/users/{user}/performance-notes', [UserPerformanceNoteController::class, 'store']);
 });
 Route::post('/user-visit-logs', [UserVisitLogController::class, 'store']);
 Route::middleware('auth:api')->post('/settings', [SiteSettingController::class, 'store']);

@@ -18,6 +18,7 @@ class Subscription extends Model
         'payment_id',
         'status',
         'start_date',
+        'registration_type',
     ];
 
     // ارتباط با کاربر

@@ -1150,8 +1150,8 @@ class DietUserController extends Controller
             ->first();
 
         // 🟢 محاسبه روزهای باقی‌مانده فقط اگر todate در آینده باشد
-        $remainingDays = null;
-        $remainingHours = null;
+        $remainingDays = 0;
+        $remainingHours = 0;
 
         if ($latestWeekly && $latestWeekly->todate) {
             $diff = Carbon::now()->diffInDays(Carbon::parse($latestWeekly->todate), false);

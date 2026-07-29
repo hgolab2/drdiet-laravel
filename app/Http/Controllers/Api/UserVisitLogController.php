@@ -166,6 +166,13 @@ class UserVisitLogController extends Controller
      *             default="day"
      *         )
      *     ),
+     *     @OA\Parameter(
+     *         name="group_by_page_url",
+     *         in="query",
+     *         required=false,
+     *         description="Also group report items by page_url",
+     *         @OA\Schema(type="boolean", default=false)
+     *     ),
      *
      *     @OA\Response(
      *         response=200,
@@ -187,11 +194,13 @@ class UserVisitLogController extends Controller
             'from' => ['required', 'date'],
             'to' => ['required', 'date', 'after_or_equal:from'],
             'group_by' => ['nullable', 'string', 'in:day,week,month,year'],
+            'group_by_page_url' => ['nullable', 'boolean'],
         ]);
 
         $from = Carbon::parse($validated['from'])->startOfDay();
         $to = Carbon::parse($validated['to'])->endOfDay();
         $groupBy = $validated['group_by'] ?? 'day';
+        $groupByPageUrl = $request->boolean('group_by_page_url');
 
         $periodExpression = $this->visitReportPeriodExpression($groupBy);
 
@@ -199,15 +208,23 @@ class UserVisitLogController extends Controller
             ->where('user_id', $request->user()->getKey())
             ->whereBetween('visited_at', [$from, $to]);
 
-        $items = (clone $baseQuery)
+        $itemsQuery = (clone $baseQuery)
             ->selectRaw("$periodExpression as period")
             ->selectRaw('COUNT(*) as visits_count')
             ->selectRaw('COUNT(DISTINCT page_url) as unique_pages_count')
             ->selectRaw('MIN(visited_at) as first_visit_at')
             ->selectRaw('MAX(visited_at) as last_visit_at')
             ->groupBy('period')
-            ->orderBy('period')
-            ->get();
+            ->orderBy('period');
+
+        if ($groupByPageUrl) {
+            $itemsQuery
+                ->addSelect('page_url', 'page_path', 'page_title')
+                ->groupBy('page_url', 'page_path', 'page_title')
+                ->orderBy('page_url');
+        }
+
+        $items = $itemsQuery->get();
 
         $topPages = (clone $baseQuery)
             ->select('page_url', 'page_path', 'page_title')
@@ -222,6 +239,7 @@ class UserVisitLogController extends Controller
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
                 'group_by' => $groupBy,
+                'group_by_page_url' => $groupByPageUrl,
             ],
             'summary' => [
                 'total_visits' => (clone $baseQuery)->count(),

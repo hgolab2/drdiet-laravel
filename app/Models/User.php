@@ -97,4 +97,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserVisitLog::class);
     }
+    public function performanceNotes(): HasMany
+    {
+        return $this->hasMany(UserPerformanceNote::class, 'user_id');
+    }
+    public function createdPerformanceNotes(): HasMany
+    {
+        return $this->hasMany(UserPerformanceNote::class, 'created_by');
+    }
 }

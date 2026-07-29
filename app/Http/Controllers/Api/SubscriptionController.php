@@ -81,7 +81,9 @@ class SubscriptionController extends Controller
             'plan_id'    => 'nullable|numeric',
             'price'      => 'nullable|numeric',
             'start_date' => 'nullable|date',
+            'registration_type' => 'nullable|in:nutrition,nutrition_exercise',
         ]);
+        $data['registration_type'] = $data['registration_type'] ?? 'nutrition';
         $data['user_id'] = $user->id;
         if($data['plan_id'] == 1)
         {
@@ -320,6 +322,9 @@ class SubscriptionController extends Controller
         if ($request->filled('status')) {
             $query->where('status',  $request->status);
         }
+        if ($request->filled('registration_type')) {
+            $query->where('registration_type',  $request->registration_type);
+        }
 
         $totalCount = $query->count();
         $items = $query->orderBy('id', 'desc')->paginate($pageSize);
@@ -333,6 +338,7 @@ class SubscriptionController extends Controller
                 'payment_id' => $item->payment_id,
                 'status' => $item->status,
                 'start_date' => $item->start_date,
+                'registration_type' => $item->registration_type,
             ];
         }, $items->items());
 
@@ -378,7 +384,9 @@ class SubscriptionController extends Controller
             'payment_id' => 'nullable|string|max:100',
             'status'     => 'nullable|in:active,expired,cancelled,pending',
             'start_date' => 'nullable|date',
+            'registration_type' => 'nullable|in:nutrition,nutrition_exercise',
         ]);
+        $data['registration_type'] = $data['registration_type'] ?? 'nutrition';
         if ($data['plan_id']>0) {
             $calorie = Subscription::create($data);
         }
@@ -467,6 +475,7 @@ class SubscriptionController extends Controller
             'payment_id' => 'nullable|string|max:100',
             'status'     => 'nullable|in:active,expired,cancelled,pending',
             'start_date' => 'nullable|date',
+            'registration_type' => 'nullable|in:nutrition,nutrition_exercise',
         ]);
 
         $calorie->update($data);
