@@ -7954,8 +7954,8 @@
                 "tags": [
                     "User Visit Logs"
                 ],
-                "summary": "Store authenticated user visit log",
-                "description": "Stores a page visit log for the authenticated user.",
+                "summary": "Store page visit log",
+                "description": "Stores a page visit log for both authenticated and guest users.",
                 "operationId": "storeUserVisitLog",
                 "requestBody": {
                     "required": true,
@@ -7994,18 +7994,15 @@
                                         "example": {
                                             "device": "desktop",
                                             "browser": "Chrome",
-                                            "browser_version": "138.0",
-                                            "os": "Windows 11",
-                                            "language": "fa",
-                                            "screen_width": 1920,
-                                            "screen_height": 1080
+                                            "os": "Windows",
+                                            "language": "fa"
                                         },
                                         "nullable": true
                                     },
                                     "visited_at": {
                                         "type": "string",
                                         "format": "date-time",
-                                        "example": "2026-07-27T12:00:00Z",
+                                        "example": "2026-07-29T10:30:00Z",
                                         "nullable": true
                                     }
                                 },
@@ -8016,7 +8013,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "User visit log saved successfully.",
+                        "description": "Visit log saved successfully.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -8033,7 +8030,8 @@
                                                 },
                                                 "user_id": {
                                                     "type": "integer",
-                                                    "example": 15
+                                                    "example": 15,
+                                                    "nullable": true
                                                 },
                                                 "page_url": {
                                                     "type": "string"
@@ -8052,7 +8050,7 @@
                                                 },
                                                 "ip_address": {
                                                     "type": "string",
-                                                    "example": "192.168.1.10"
+                                                    "example": "192.168.1.15"
                                                 },
                                                 "user_agent": {
                                                     "type": "string",
@@ -8082,18 +8080,10 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "Unauthenticated."
-                    },
                     "422": {
                         "description": "Validation error."
                     }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/user-visit-logs/report": {

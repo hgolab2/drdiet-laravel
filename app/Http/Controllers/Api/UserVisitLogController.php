@@ -16,9 +16,8 @@ class UserVisitLogController extends Controller
      *     path="/api/user-visit-logs",
      *     operationId="storeUserVisitLog",
      *     tags={"User Visit Logs"},
-     *     summary="Store authenticated user visit log",
-     *     description="Stores a page visit log for the authenticated user.",
-     *     security={{"bearerAuth":{}}},
+     *     summary="Store page visit log",
+     *     description="Stores a page visit log for both authenticated and guest users.",
      *
      *     @OA\RequestBody(
      *         required=true,
@@ -31,27 +30,31 @@ class UserVisitLogController extends Controller
      *                 maxLength=2048,
      *                 example="https://drdietapp.com/dashboard"
      *             ),
+     *
      *             @OA\Property(
      *                 property="page_path",
      *                 type="string",
-     *                 maxLength=1024,
      *                 nullable=true,
+     *                 maxLength=1024,
      *                 example="/dashboard"
      *             ),
+     *
      *             @OA\Property(
      *                 property="page_title",
      *                 type="string",
-     *                 maxLength=255,
      *                 nullable=true,
+     *                 maxLength=255,
      *                 example="Dashboard"
      *             ),
+     *
      *             @OA\Property(
      *                 property="referrer_url",
      *                 type="string",
-     *                 maxLength=2048,
      *                 nullable=true,
+     *                 maxLength=2048,
      *                 example="https://google.com"
      *             ),
+     *
      *             @OA\Property(
      *                 property="metadata",
      *                 type="object",
@@ -59,38 +62,40 @@ class UserVisitLogController extends Controller
      *                 example={
      *                     "device":"desktop",
      *                     "browser":"Chrome",
-     *                     "browser_version":"138.0",
-     *                     "os":"Windows 11",
-     *                     "language":"fa",
-     *                     "screen_width":1920,
-     *                     "screen_height":1080
+     *                     "os":"Windows",
+     *                     "language":"fa"
      *                 }
      *             ),
+     *
      *             @OA\Property(
      *                 property="visited_at",
      *                 type="string",
      *                 format="date-time",
      *                 nullable=true,
-     *                 example="2026-07-27T12:00:00Z"
+     *                 example="2026-07-29T10:30:00Z"
      *             )
      *         )
      *     ),
      *
      *     @OA\Response(
      *         response=201,
-     *         description="User visit log saved successfully.",
+     *         description="Visit log saved successfully.",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="User visit log saved."),
+     *             @OA\Property(
+     *                 property="message",
+     *                 type="string",
+     *                 example="User visit log saved."
+     *             ),
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="user_id", type="integer", example=15),
+     *                 @OA\Property(property="user_id", type="integer", nullable=true, example=15),
      *                 @OA\Property(property="page_url", type="string"),
      *                 @OA\Property(property="page_path", type="string", nullable=true),
      *                 @OA\Property(property="page_title", type="string", nullable=true),
      *                 @OA\Property(property="referrer_url", type="string", nullable=true),
-     *                 @OA\Property(property="ip_address", type="string", example="192.168.1.10"),
+     *                 @OA\Property(property="ip_address", type="string", example="192.168.1.15"),
      *                 @OA\Property(property="user_agent", type="string", example="Mozilla/5.0"),
      *                 @OA\Property(property="metadata", type="object"),
      *                 @OA\Property(property="visited_at", type="string", format="date-time"),
@@ -98,11 +103,6 @@ class UserVisitLogController extends Controller
      *                 @OA\Property(property="updated_at", type="string", format="date-time")
      *             )
      *         )
-     *     ),
-     *
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthenticated."
      *     ),
      *
      *     @OA\Response(
@@ -115,12 +115,17 @@ class UserVisitLogController extends Controller
     {
         $data = $request->validated();
 
-        $data['user_id'] = $request->user()->getKey();
-        $data['ip_address'] = $request->ip();
-        $data['user_agent'] = $request->userAgent();
-        $data['visited_at'] ??= now();
-
-        $visitLog = UserVisitLog::create($data);
+        $visitLog = UserVisitLog::create([
+            'user_id'      => auth('api')->id(),
+            'page_url'     => $data['page_url'],
+            'page_path'    => $data['page_path'] ?? null,
+            'page_title'   => $data['page_title'] ?? null,
+            'referrer_url' => $data['referrer_url'] ?? null,
+            'ip_address'   => $request->ip(),
+            'user_agent'   => $request->userAgent(),
+            'metadata'     => $data['metadata'] ?? null,
+            'visited_at'   => $data['visited_at'] ?? now(),
+        ]);
 
         return response()->json([
             'message' => 'User visit log saved.',
