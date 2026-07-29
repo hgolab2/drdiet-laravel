@@ -7598,6 +7598,76 @@
                 }
             }
         },
+        "/api/settings": {
+            "post": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Create or update a site setting",
+                "operationId": "cb1baaea1796b3f7fc69b688a92c2224",
+                "responses": {
+                    "200": {
+                        "description": "Setting saved"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/settings/{key}": {
+            "get": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Get a site setting by key",
+                "operationId": "406a5517f59e3aa40b67d8df7d73b93e",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Setting value"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Update a site setting by key",
+                "operationId": "1c3bd0f91aa6cb4931ba6ee36b7e3c0a",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Setting updated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/addSubscriptions": {
             "post": {
                 "tags": [
@@ -8583,6 +8653,10 @@
         {
             "name": "Transactions",
             "description": "Transactions"
+        },
+        {
+            "name": "Settings",
+            "description": "Settings"
         },
         {
             "name": "Subscriptions",
