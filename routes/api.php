@@ -19,12 +19,17 @@ use App\Http\Controllers\Api\ExerciseUsersProgramController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\UserVisitLogController;
+use App\Http\Controllers\Api\SiteSettingController;
 Route::middleware('auth:api')->group(function () {
     Route::post('/device-token', [DeviceTokenController::class, 'store']);
     Route::delete('/device-token', [DeviceTokenController::class, 'destroy']);
     Route::get('/user-visit-logs/report', [UserVisitLogController::class, 'report']);
 });
 Route::post('/user-visit-logs', [UserVisitLogController::class, 'store']);
+Route::middleware('auth:api')->post('/settings', [SiteSettingController::class, 'store']);
+Route::middleware('auth:api')->put('/settings/{key}', [SiteSettingController::class, 'update']);
+Route::middleware('auth:api')->patch('/settings/{key}', [SiteSettingController::class, 'update']);
+Route::get('/settings/{key}', [SiteSettingController::class, 'show']);
 Route::get('/exercise-users-programs', [ExerciseUsersProgramController::class, 'index']);
 Route::post('/exercise-users-programs', [ExerciseUsersProgramController::class, 'store']);
 Route::get('/exercise-users-programs/{id}', [ExerciseUsersProgramController::class, 'show']);
