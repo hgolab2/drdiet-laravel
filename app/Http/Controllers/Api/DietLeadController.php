@@ -1233,7 +1233,7 @@ class DietLeadController extends Controller
      *          in="query",
      *          required=true,
      *          description="Statistic Type",
-     *          @OA\Schema(type="string", enum={"count","gender","age","disease"})
+     *          @OA\Schema(type="string", enum={"count","gender","age","disease","source"})
      *     ),
      *
      *     @OA\Parameter(
@@ -1252,6 +1252,14 @@ class DietLeadController extends Controller
      *     ),
      *
      *     @OA\Parameter(
+     *          name="source",
+     *          in="query",
+     *          required=false,
+     *          description="Filter statistics by lead source",
+     *          @OA\Schema(type="string", example="source1")
+     *     ),
+     *
+     *     @OA\Parameter(
      *          name="date_to",
      *          in="query",
      *          required=false,
@@ -1267,13 +1275,18 @@ class DietLeadController extends Controller
     public function statistics(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:count,gender,age,disease',
+            'type' => 'required|in:count,gender,age,disease,source',
             'period' => 'nullable|in:today,yesterday,week,month,year',
             'date_from' => 'nullable|date|required_with:date_to',
             'date_to' => 'nullable|date|required_with:date_from|after_or_equal:date_from',
+            'source' => 'nullable|string|max:100',
         ]);
 
         $query = DietLead::query();
+
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
 
         if ($request->filled('date_from') && $request->filled('date_to')) {
 
@@ -1317,6 +1330,7 @@ class DietLeadController extends Controller
             'gender' => $this->genderStatistics($query),
             'age' => $this->ageStatistics($query),
             'disease' => $this->diseaseStatistics($query),
+            'source' => $this->sourceStatistics($query),
         };
     }
     private function countStatistics($query)
@@ -1336,6 +1350,20 @@ class DietLeadController extends Controller
             'male' => (int)($data['male'] ?? 0),
             'female' => (int)($data['female'] ?? 0),
         ]);
+    }
+    private function sourceStatistics($query)
+    {
+        $data = $query
+            ->selectRaw("COALESCE(NULLIF(source, ''), 'unknown') as source, COUNT(*) as total")
+            ->groupBy('source')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($item) => [
+                'source' => $item->source,
+                'total' => (int)$item->total,
+            ]);
+
+        return response()->json($data);
     }
     private function diseaseStatistics($query)
     {
