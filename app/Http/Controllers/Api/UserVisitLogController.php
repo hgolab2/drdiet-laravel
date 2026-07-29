@@ -207,15 +207,15 @@ class UserVisitLogController extends Controller
 
         $baseQuery = UserVisitLog::query()
             ->where('user_id', $request->user()->getKey())
-            ->whereBetween('visited_at', [$from, $to]);
+            ->whereBetween('created_at', [$from, $to]);
 
         $items = (clone $baseQuery)
             ->select('page_url')
             ->selectRaw('MIN(page_path) as page_path')
             ->selectRaw('MIN(page_title) as page_title')
             ->selectRaw('COUNT(*) as visits_count')
-            ->selectRaw('MIN(visited_at) as first_visit_at')
-            ->selectRaw('MAX(visited_at) as last_visit_at')
+            ->selectRaw('MIN(created_at) as first_visit_at')
+            ->selectRaw('MAX(created_at) as last_visit_at')
             ->groupBy('page_url')
             ->orderByDesc('visits_count')
             ->orderBy('page_url')
@@ -234,8 +234,8 @@ class UserVisitLogController extends Controller
                 'unique_pages_count' => (clone $baseQuery)
                     ->distinct('page_url')
                     ->count('page_url'),
-                'first_visit_at' => optional((clone $baseQuery)->oldest('visited_at')->first())->visited_at,
-                'last_visit_at' => optional((clone $baseQuery)->latest('visited_at')->first())->visited_at,
+                'first_visit_at' => optional((clone $baseQuery)->oldest('created_at')->first())->created_at,
+                'last_visit_at' => optional((clone $baseQuery)->latest('created_at')->first())->created_at,
             ],
             'items' => $items,
         ]);
