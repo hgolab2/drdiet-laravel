@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="102" height="102" viewBox="0 0 102 102">
+  <defs>
+    <filter id="Ellipse_1" x="0" y="0" width="102" height="102" filterUnits="userSpaceOnUse">
+      <feOffset dy="3" input="SourceAlpha"/>
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-opacity="0.161"/>
+      <feComposite operator="in" in2="blur"/>
+      <feComposite in="SourceGraphic"/>
+    </filter>
+    <filter id="Ellipse_1-2" x="0" y="0" width="102" height="102" filterUnits="userSpaceOnUse">
+      <feOffset dy="3" input="SourceAlpha"/>
+      <feGaussianBlur stdDeviation="3" result="blur-2"/>
+      <feFlood flood-color="#fff" flood-opacity="0.631" result="color"/>
+      <feComposite operator="out" in="SourceGraphic" in2="blur-2"/>
+      <feComposite operator="in" in="color"/>
+      <feComposite operator="in" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  <g data-type="innerShadowGroup">
+    <g transform="matrix(1, 0, 0, 1, 0, 0)" filter="url(#Ellipse_1)">
+      <circle id="Ellipse_1-3" data-name="Ellipse 1" cx="42" cy="42" r="42" transform="translate(9 6)" fill="#83c226"/>
+    </g>
+    <g transform="matrix(1, 0, 0, 1, 0, 0)" filter="url(#Ellipse_1-2)">
+      <circle id="Ellipse_1-4" data-name="Ellipse 1" cx="42" cy="42" r="42" transform="translate(9 6)" fill="#fff"/>
+    </g>
+  </g>
+  <rect id="Rectangle_2" data-name="Rectangle 2" width="13" height="31" rx="6.5" transform="translate(22.387 51.192) rotate(-45)" fill="#fff"/>
+  <rect id="Rectangle_3" data-name="Rectangle 3" width="13" height="53" rx="6.5" transform="translate(73.42 26.444) rotate(45)" fill="#fff"/>
+</svg>

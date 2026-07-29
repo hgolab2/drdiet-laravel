@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Credit Card Payment Form</title>
+    <!-- Include the PayPal JavaScript SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AW5ThXjTyCwNX6DbOg8JLJTaoRN4n-SniYxXgRbu-TN-a1HHqI29czcna8OmsoCc-e2BJ_TeeY0IlxPS"></script>
+    <script>
+        // Render the PayPal button
+        paypal.Buttons({
+            createOrder: function(data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            value: '80.00' // Set the payment amount here
+                        }
+                    }]
+                });
+            },
+            onApprove: function(data, actions) {
+                return actions.order.capture().then(function(details) {
+                    // Send the payment details to the server for processing
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', 'process-payment-11.php');
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            console.log(xhr.responseText);
+                            alert('Payment completed successfully!');
+                        } else {
+                            console.log(xhr.responseText);
+                            alert('Payment failed, please try again!');
+                        }
+                    };
+                    xhr.send('paymentID=' + data.orderID + '&payerID=' + data.payerID + '&paymentAmount=' + details.purchase_units[0].amount.value);
+                });
+            }
+        }).render('#paypal-button-container');
+    </script>
+</head>
+<body>
+    <h1>Credit Card Payment Form</h1>
+    <div id="paypal-button-container"></div>
+</body>
+</html>
