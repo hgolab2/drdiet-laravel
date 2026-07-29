@@ -8,6 +8,7 @@ use App\Models\UserVisitLog;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserVisitLogController extends Controller
 {
@@ -137,41 +138,41 @@ class UserVisitLogController extends Controller
      * @OA\Get(
      *     path="/api/user-visit-logs/report",
      *     operationId="userVisitLogReport",
-     *     summary="Get authenticated user visit report",
+     *     summary="Get authenticated user visit report grouped by page URL",
      *     tags={"User Visit Logs"},
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="from",
      *         in="query",
-     *         required=true,
-     *         description="Start date",
+     *         required=false,
+     *         description="Start date for custom range",
      *         @OA\Schema(type="string", format="date", example="2026-07-01")
      *     ),
      *     @OA\Parameter(
      *         name="to",
      *         in="query",
-     *         required=true,
-     *         description="End date",
+     *         required=false,
+     *         description="End date for custom range",
      *         @OA\Schema(type="string", format="date", example="2026-07-31")
      *     ),
      *     @OA\Parameter(
-     *         name="group_by",
+     *         name="date",
      *         in="query",
      *         required=false,
-     *         description="Group result by period",
-     *         @OA\Schema(
-     *             type="string",
-     *             enum={"day","week","month","year"},
-     *             default="day"
-     *         )
+     *         description="Single selected date",
+     *         @OA\Schema(type="string", format="date", example="2026-07-29")
      *     ),
      *     @OA\Parameter(
-     *         name="group_by_page_url",
+     *         name="period",
      *         in="query",
      *         required=false,
-     *         description="Also group report items by page_url",
-     *         @OA\Schema(type="boolean", default=false)
+     *         description="Preset date range. Used when from/to and date are not provided.",
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"today","yesterday","week","month","year"},
+     *             default="today"
+     *         )
      *     ),
      *
      *     @OA\Response(
@@ -190,56 +191,43 @@ class UserVisitLogController extends Controller
      */
     public function report(Request $request): JsonResponse
     {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['super_admin', 'marketing'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
-            'from' => ['required', 'date'],
-            'to' => ['required', 'date', 'after_or_equal:from'],
-            'group_by' => ['nullable', 'string', 'in:day,week,month,year'],
-            'group_by_page_url' => ['nullable', 'boolean'],
+            'from' => ['nullable', 'date', 'required_with:to'],
+            'to' => ['nullable', 'date', 'required_with:from', 'after_or_equal:from'],
+            'date' => ['nullable', 'date'],
+            'period' => ['nullable', 'string', 'in:today,yesterday,week,month,year'],
         ]);
 
-        $from = Carbon::parse($validated['from'])->startOfDay();
-        $to = Carbon::parse($validated['to'])->endOfDay();
-        $groupBy = $validated['group_by'] ?? 'day';
-        $groupByPageUrl = $request->boolean('group_by_page_url');
-
-        $periodExpression = $this->visitReportPeriodExpression($groupBy);
+        [$from, $to, $rangeType] = $this->visitReportDateRange($validated);
 
         $baseQuery = UserVisitLog::query()
             ->where('user_id', $request->user()->getKey())
             ->whereBetween('visited_at', [$from, $to]);
 
-        $itemsQuery = (clone $baseQuery)
-            ->selectRaw("$periodExpression as period")
+        $items = (clone $baseQuery)
+            ->select('page_url')
+            ->selectRaw('MIN(page_path) as page_path')
+            ->selectRaw('MIN(page_title) as page_title')
             ->selectRaw('COUNT(*) as visits_count')
-            ->selectRaw('COUNT(DISTINCT page_url) as unique_pages_count')
             ->selectRaw('MIN(visited_at) as first_visit_at')
             ->selectRaw('MAX(visited_at) as last_visit_at')
-            ->groupBy('period')
-            ->orderBy('period');
-
-        if ($groupByPageUrl) {
-            $itemsQuery
-                ->addSelect('page_url', 'page_path', 'page_title')
-                ->groupBy('page_url', 'page_path', 'page_title')
-                ->orderBy('page_url');
-        }
-
-        $items = $itemsQuery->get();
-
-        $topPages = (clone $baseQuery)
-            ->select('page_url', 'page_path', 'page_title')
-            ->selectRaw('COUNT(*) as visits_count')
-            ->groupBy('page_url', 'page_path', 'page_title')
+            ->groupBy('page_url')
             ->orderByDesc('visits_count')
-            ->limit(10)
+            ->orderBy('page_url')
             ->get();
 
         return response()->json([
             'filters' => [
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
-                'group_by' => $groupBy,
-                'group_by_page_url' => $groupByPageUrl,
+                'range_type' => $rangeType,
+                'period' => $validated['period'] ?? null,
+                'date' => isset($validated['date']) ? Carbon::parse($validated['date'])->toDateString() : null,
             ],
             'summary' => [
                 'total_visits' => (clone $baseQuery)->count(),
@@ -250,17 +238,60 @@ class UserVisitLogController extends Controller
                 'last_visit_at' => optional((clone $baseQuery)->latest('visited_at')->first())->visited_at,
             ],
             'items' => $items,
-            'top_pages' => $topPages,
         ]);
     }
 
-    private function visitReportPeriodExpression(string $groupBy): string
+    /**
+     * @param array{from?:string,to?:string,date?:string,period?:string} $validated
+     *
+     * @return array{0:Carbon,1:Carbon,2:string}
+     */
+    private function visitReportDateRange(array $validated): array
     {
-        return match ($groupBy) {
-            'week' => "DATE_FORMAT(visited_at, '%x-W%v')",
-            'month' => "DATE_FORMAT(visited_at, '%Y-%m')",
-            'year' => "DATE_FORMAT(visited_at, '%Y')",
-            default => 'DATE(visited_at)',
+        if (!empty($validated['from']) && !empty($validated['to'])) {
+            return [
+                Carbon::parse($validated['from'])->startOfDay(),
+                Carbon::parse($validated['to'])->endOfDay(),
+                'custom',
+            ];
+        }
+
+        if (!empty($validated['date'])) {
+            $date = Carbon::parse($validated['date']);
+
+            return [
+                $date->copy()->startOfDay(),
+                $date->copy()->endOfDay(),
+                'date',
+            ];
+        }
+
+        return match ($validated['period'] ?? 'today') {
+            'yesterday' => [
+                now()->subDay()->startOfDay(),
+                now()->subDay()->endOfDay(),
+                'yesterday',
+            ],
+            'week' => [
+                now()->startOfWeek(),
+                now()->endOfWeek(),
+                'week',
+            ],
+            'month' => [
+                now()->startOfMonth(),
+                now()->endOfMonth(),
+                'month',
+            ],
+            'year' => [
+                now()->startOfYear(),
+                now()->endOfYear(),
+                'year',
+            ],
+            default => [
+                now()->startOfDay(),
+                now()->endOfDay(),
+                'today',
+            ],
         };
     }
 }

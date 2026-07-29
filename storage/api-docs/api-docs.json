@@ -8345,14 +8345,14 @@
                 "tags": [
                     "User Visit Logs"
                 ],
-                "summary": "Get authenticated user visit report",
+                "summary": "Get authenticated user visit report grouped by page URL",
                 "operationId": "userVisitLogReport",
                 "parameters": [
                     {
                         "name": "from",
                         "in": "query",
-                        "description": "Start date",
-                        "required": true,
+                        "description": "Start date for custom range",
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date",
@@ -8362,8 +8362,8 @@
                     {
                         "name": "to",
                         "in": "query",
-                        "description": "End date",
-                        "required": true,
+                        "description": "End date for custom range",
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date",
@@ -8371,29 +8371,31 @@
                         }
                     },
                     {
-                        "name": "group_by",
+                        "name": "date",
                         "in": "query",
-                        "description": "Group result by period",
+                        "description": "Single selected date",
                         "required": false,
                         "schema": {
                             "type": "string",
-                            "default": "day",
+                            "format": "date",
+                            "example": "2026-07-29"
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Preset date range. Used when from/to and date are not provided.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "today",
                             "enum": [
-                                "day",
+                                "today",
+                                "yesterday",
                                 "week",
                                 "month",
                                 "year"
                             ]
-                        }
-                    },
-                    {
-                        "name": "group_by_page_url",
-                        "in": "query",
-                        "description": "Also group report items by page_url",
-                        "required": false,
-                        "schema": {
-                            "type": "boolean",
-                            "default": false
                         }
                     }
                 ],

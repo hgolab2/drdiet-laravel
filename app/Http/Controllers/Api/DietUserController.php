@@ -1274,7 +1274,7 @@ class DietUserController extends Controller
             'roles' => $roles,
             'subscription_day' => $subscriptionDay,
             'remaining_days' => $remainingDays,
-            'remaining_days' => $remainingHours,
+            'remainingHours' => $remainingHours,
             'has_exercise_program' => !is_null($programs),
             'programs' => $programs,
             //'ai_description' => $item->ai_description,

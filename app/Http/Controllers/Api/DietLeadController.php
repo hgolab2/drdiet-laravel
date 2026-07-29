@@ -477,8 +477,8 @@ class DietLeadController extends Controller
     public function sourceReport()
     {
         $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        if (!$user->hasAnyRole(['super_admin', 'marketing'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
         $today = Carbon::today()->toDateString();
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
@@ -1274,6 +1274,11 @@ class DietLeadController extends Controller
      */
     public function statistics(Request $request)
     {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['super_admin', 'marketing'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
         $request->validate([
             'type' => 'required|in:count,gender,age,disease,source',
             'period' => 'nullable|in:today,yesterday,week,month,year',

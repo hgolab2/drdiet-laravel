@@ -8019,6 +8019,190 @@
                 ]
             }
         },
+        "/api/user-performance-notes": {
+            "get": {
+                "tags": [
+                    "User Performance Notes"
+                ],
+                "summary": "List all user performance notes",
+                "description": "Returns all user performance notes for super admin users. Supports filtering by target user, creator, and date range.",
+                "operationId": "7eedc5a174bd0ae1b1412d500ae45c98",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Target user id",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "created_by",
+                        "in": "query",
+                        "description": "Creator user id",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Start creation date",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "End creation date",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "pagesize",
+                        "in": "query",
+                        "description": "Items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Performance notes returned successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{user}/performance-notes": {
+            "get": {
+                "tags": [
+                    "User Performance Notes"
+                ],
+                "summary": "List performance notes for a user",
+                "description": "Returns performance notes registered for the selected user.",
+                "operationId": "d223068661bcd925987ea325fedc42cd",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "Target user id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "pagesize",
+                        "in": "query",
+                        "description": "Items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Performance notes returned successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "User Performance Notes"
+                ],
+                "summary": "Create a performance note for a user",
+                "description": "Creates a performance note for the selected user and stores the creator and creation time.",
+                "operationId": "50f4f281582d955ac729f90ac2a86172",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "Target user id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "description"
+                                ],
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "maxLength": 5000,
+                                        "example": "User performance note text"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Performance note created successfully"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/user-visit-logs": {
             "post": {
                 "tags": [
@@ -8161,14 +8345,14 @@
                 "tags": [
                     "User Visit Logs"
                 ],
-                "summary": "Get authenticated user visit report",
+                "summary": "Get authenticated user visit report grouped by page URL",
                 "operationId": "userVisitLogReport",
                 "parameters": [
                     {
                         "name": "from",
                         "in": "query",
-                        "description": "Start date",
-                        "required": true,
+                        "description": "Start date for custom range",
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date",
@@ -8178,8 +8362,8 @@
                     {
                         "name": "to",
                         "in": "query",
-                        "description": "End date",
-                        "required": true,
+                        "description": "End date for custom range",
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date",
@@ -8187,15 +8371,27 @@
                         }
                     },
                     {
-                        "name": "group_by",
+                        "name": "date",
                         "in": "query",
-                        "description": "Group result by period",
+                        "description": "Single selected date",
                         "required": false,
                         "schema": {
                             "type": "string",
-                            "default": "day",
+                            "format": "date",
+                            "example": "2026-07-29"
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Preset date range. Used when from/to and date are not provided.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "today",
                             "enum": [
-                                "day",
+                                "today",
+                                "yesterday",
                                 "week",
                                 "month",
                                 "year"
@@ -8661,6 +8857,10 @@
         {
             "name": "Subscriptions",
             "description": "Subscriptions"
+        },
+        {
+            "name": "User Performance Notes",
+            "description": "User Performance Notes"
         },
         {
             "name": "User Visit Logs",
