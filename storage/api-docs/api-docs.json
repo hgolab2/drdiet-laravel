@@ -8345,13 +8345,32 @@
                 "tags": [
                     "User Visit Logs"
                 ],
-                "summary": "Get authenticated user visit report grouped by page URL",
+                "summary": "Page visit report",
+                "description": "Returns page visit statistics grouped by page_url.",
                 "operationId": "userVisitLogReport",
                 "parameters": [
                     {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Date period",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "today",
+                                "yesterday",
+                                "week",
+                                "month",
+                                "year",
+                                "custom"
+                            ],
+                            "example": "today"
+                        }
+                    },
+                    {
                         "name": "from",
                         "in": "query",
-                        "description": "Start date for custom range",
+                        "description": "Required when period=custom",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -8362,49 +8381,21 @@
                     {
                         "name": "to",
                         "in": "query",
-                        "description": "End date for custom range",
+                        "description": "Required when period=custom",
                         "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date",
                             "example": "2026-07-31"
                         }
-                    },
-                    {
-                        "name": "date",
-                        "in": "query",
-                        "description": "Single selected date",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "format": "date",
-                            "example": "2026-07-29"
-                        }
-                    },
-                    {
-                        "name": "period",
-                        "in": "query",
-                        "description": "Preset date range. Used when from/to and date are not provided.",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "default": "today",
-                            "enum": [
-                                "today",
-                                "yesterday",
-                                "week",
-                                "month",
-                                "year"
-                            ]
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Visit report returned successfully."
+                        "description": "Visit report."
                     },
                     "401": {
-                        "description": "Unauthenticated."
+                        "description": "Unauthorized."
                     },
                     "422": {
                         "description": "Validation error."

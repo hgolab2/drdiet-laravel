@@ -135,163 +135,135 @@ class UserVisitLogController extends Controller
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/user-visit-logs/report",
-     *     operationId="userVisitLogReport",
-     *     summary="Get authenticated user visit report grouped by page URL",
-     *     tags={"User Visit Logs"},
-     *     security={{"bearerAuth":{}}},
-     *
-     *     @OA\Parameter(
-     *         name="from",
-     *         in="query",
-     *         required=false,
-     *         description="Start date for custom range",
-     *         @OA\Schema(type="string", format="date", example="2026-07-01")
-     *     ),
-     *     @OA\Parameter(
-     *         name="to",
-     *         in="query",
-     *         required=false,
-     *         description="End date for custom range",
-     *         @OA\Schema(type="string", format="date", example="2026-07-31")
-     *     ),
-     *     @OA\Parameter(
-     *         name="date",
-     *         in="query",
-     *         required=false,
-     *         description="Single selected date",
-     *         @OA\Schema(type="string", format="date", example="2026-07-29")
-     *     ),
-     *     @OA\Parameter(
-     *         name="period",
-     *         in="query",
-     *         required=false,
-     *         description="Preset date range. Used when from/to and date are not provided.",
-     *         @OA\Schema(
-     *             type="string",
-     *             enum={"today","yesterday","week","month","year"},
-     *             default="today"
-     *         )
-     *     ),
-     *
-     *     @OA\Response(
-     *         response=200,
-     *         description="Visit report returned successfully."
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthenticated."
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error."
-     *     )
-     * )
-     */
+ * @OA\Get(
+ *     path="/api/user-visit-logs/report",
+ *     operationId="userVisitLogReport",
+ *     tags={"User Visit Logs"},
+ *     summary="Page visit report",
+ *     description="Returns page visit statistics grouped by page_url.",
+ *     security={{"bearerAuth":{}}},
+ *
+ *     @OA\Parameter(
+ *         name="period",
+ *         in="query",
+ *         required=true,
+ *         description="Date period",
+ *         @OA\Schema(
+ *             type="string",
+ *             enum={"today","yesterday","week","month","year","custom"},
+ *             example="today"
+ *         )
+ *     ),
+ *
+ *     @OA\Parameter(
+ *         name="from",
+ *         in="query",
+ *         required=false,
+ *         description="Required when period=custom",
+ *         @OA\Schema(
+ *             type="string",
+ *             format="date",
+ *             example="2026-07-01"
+ *         )
+ *     ),
+ *
+ *     @OA\Parameter(
+ *         name="to",
+ *         in="query",
+ *         required=false,
+ *         description="Required when period=custom",
+ *         @OA\Schema(
+ *             type="string",
+ *             format="date",
+ *             example="2026-07-31"
+ *         )
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="Visit report."
+ *     ),
+ *     @OA\Response(
+ *         response=401,
+ *         description="Unauthorized."
+ *     ),
+ *     @OA\Response(
+ *         response=422,
+ *         description="Validation error."
+ *     )
+ * )
+ */
     public function report(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'marketing'])) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+{
+    $validated = $request->validate([
+        'period' => 'required|in:today,yesterday,week,month,year,custom',
+        'from' => 'nullable|date',
+        'to' => 'nullable|date|after_or_equal:from',
+    ]);
 
-        $validated = $request->validate([
-            'from' => ['nullable', 'date', 'required_with:to'],
-            'to' => ['nullable', 'date', 'required_with:from', 'after_or_equal:from'],
-            'date' => ['nullable', 'date'],
-            'period' => ['nullable', 'string', 'in:today,yesterday,week,month,year'],
-        ]);
+    switch ($validated['period']) {
 
-        [$from, $to, $rangeType] = $this->visitReportDateRange($validated);
+        case 'today':
+            $from = now()->startOfDay();
+            $to = now()->endOfDay();
+            break;
 
-        $baseQuery = UserVisitLog::query()
-            ->where('user_id', $request->user()->getKey())
-            ->whereBetween('created_at', [$from, $to]);
+        case 'yesterday':
+            $from = now()->subDay()->startOfDay();
+            $to = now()->subDay()->endOfDay();
+            break;
 
-        $items = (clone $baseQuery)
-            ->select('page_url')
-            ->selectRaw('MIN(page_path) as page_path')
-            ->selectRaw('MIN(page_title) as page_title')
-            ->selectRaw('COUNT(*) as visits_count')
-            ->selectRaw('MIN(created_at) as first_visit_at')
-            ->selectRaw('MAX(created_at) as last_visit_at')
-            ->groupBy('page_url')
-            ->orderByDesc('visits_count')
-            ->orderBy('page_url')
-            ->get();
+        case 'week':
+            $from = now()->startOfWeek();
+            $to = now()->endOfWeek();
+            break;
 
-        return response()->json([
-            'filters' => [
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
-                'range_type' => $rangeType,
-                'period' => $validated['period'] ?? null,
-                'date' => isset($validated['date']) ? Carbon::parse($validated['date'])->toDateString() : null,
-            ],
-            'summary' => [
-                'total_visits' => (clone $baseQuery)->count(),
-                'unique_pages_count' => (clone $baseQuery)
-                    ->distinct('page_url')
-                    ->count('page_url'),
-                'first_visit_at' => optional((clone $baseQuery)->oldest('created_at')->first())->created_at,
-                'last_visit_at' => optional((clone $baseQuery)->latest('created_at')->first())->created_at,
-            ],
-            'items' => $items,
-        ]);
+        case 'month':
+            $from = now()->startOfMonth();
+            $to = now()->endOfMonth();
+            break;
+
+        case 'year':
+            $from = now()->startOfYear();
+            $to = now()->endOfYear();
+            break;
+
+        default:
+
+            if (empty($validated['from']) || empty($validated['to'])) {
+                return response()->json([
+                    'message' => 'from and to are required when period is custom.'
+                ], 422);
+            }
+
+            $from = Carbon::parse($validated['from'])->startOfDay();
+            $to = Carbon::parse($validated['to'])->endOfDay();
     }
 
-    /**
-     * @param array{from?:string,to?:string,date?:string,period?:string} $validated
-     *
-     * @return array{0:Carbon,1:Carbon,2:string}
-     */
-    private function visitReportDateRange(array $validated): array
-    {
-        if (!empty($validated['from']) && !empty($validated['to'])) {
-            return [
-                Carbon::parse($validated['from'])->startOfDay(),
-                Carbon::parse($validated['to'])->endOfDay(),
-                'custom',
-            ];
-        }
+    $query = UserVisitLog::query()
+        ->whereBetween('created_at', [$from, $to]);
 
-        if (!empty($validated['date'])) {
-            $date = Carbon::parse($validated['date']);
+    $pages = (clone $query)
+        ->select('page_url', 'page_title', 'page_path')
+        ->selectRaw('COUNT(*) as visits_count')
+        ->selectRaw('MAX(created_at) as last_visit_at')
+        ->groupBy('page_url', 'page_title', 'page_path')
+        ->orderByDesc('visits_count')
+        ->get();
 
-            return [
-                $date->copy()->startOfDay(),
-                $date->copy()->endOfDay(),
-                'date',
-            ];
-        }
+    return response()->json([
+        'filters' => [
+            'period' => $validated['period'],
+            'from' => $from,
+            'to' => $to,
+        ],
 
-        return match ($validated['period'] ?? 'today') {
-            'yesterday' => [
-                now()->subDay()->startOfDay(),
-                now()->subDay()->endOfDay(),
-                'yesterday',
-            ],
-            'week' => [
-                now()->startOfWeek(),
-                now()->endOfWeek(),
-                'week',
-            ],
-            'month' => [
-                now()->startOfMonth(),
-                now()->endOfMonth(),
-                'month',
-            ],
-            'year' => [
-                now()->startOfYear(),
-                now()->endOfYear(),
-                'year',
-            ],
-            default => [
-                now()->startOfDay(),
-                now()->endOfDay(),
-                'today',
-            ],
-        };
-    }
+        'summary' => [
+            'total_visits' => (clone $query)->count(),
+            'unique_pages' => $pages->count(),
+        ],
+
+        'pages' => $pages,
+    ]);
+}
 }
