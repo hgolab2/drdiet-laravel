@@ -896,10 +896,10 @@ class DietUserController extends Controller
 
             if ($latestWeekly && $latestWeekly->todate) {
                 $diff = Carbon::now()->diffInDays(Carbon::parse($latestWeekly->todate), false);
-                $remainingDays = $diff > 0 ? $diff : null;
+                $remainingDays = $diff > 0 ? $diff : 0;
 
                 $diff = Carbon::now()->diffInHours(Carbon::parse($latestWeekly->todate), false);
-                $remainingHours = $diff > 0 ? $diff : null;
+                $remainingHours = $diff > 0 ? $diff : 0;
             }
             // if ($latestWeekly && $latestWeekly->todate) {
             //     $now = Carbon::now();
@@ -1160,10 +1160,10 @@ class DietUserController extends Controller
 
         if ($latestWeekly && $latestWeekly->todate) {
             $diff = Carbon::now()->diffInDays(Carbon::parse($latestWeekly->todate), false);
-            $remainingDays = $diff > 0 ? $diff : null;
+            $remainingDays = $diff > 0 ? $diff : 0;
 
             $diff = Carbon::now()->diffInHours(Carbon::parse($latestWeekly->todate), false);
-            $remainingHours = $diff > 0 ? $diff : null;
+            $remainingHours = $diff > 0 ? $diff : 0;
         }
         // if ($latestWeekly && $latestWeekly->todate) {
         //     $now = Carbon::now();
