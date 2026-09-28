@@ -31,10 +31,10 @@ class PaymentController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('super_admin')) {
+        if (!$user || !$user->hasRole('super_admin')) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        
+
         $pageSize = (int)($request->pagesize ?? 20);
         $query = Payment::query();
 

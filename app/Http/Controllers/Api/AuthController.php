@@ -129,15 +129,19 @@ class AuthController extends Controller
         $user = User::create($data);
 
         $loginLink = 'https://di3t-club.com/login/callback-email?token=' . $data['login_token'];
-        // ارسال ایمیل به کاربر
-        Mail::send('emails.welcome_password', [
-            'user' => $user,
-            'password' => $plainPassword,
-            'loginLink' => $loginLink,
-        ], function ($message) use ($user) {
-            $message->to($user->email, $user->first_name . ' ' . $user->last_name)
-                    ->subject('Di3t Club');
-        });
+        // ارسال ایمیل به کاربر (خطای سرور ایمیل نباید ثبت‌نام را خراب کند؛ کاربر قبلاً ساخته شده)
+        try {
+            Mail::send('emails.welcome_password', [
+                'user' => $user,
+                'password' => $plainPassword,
+                'loginLink' => $loginLink,
+            ], function ($message) use ($user) {
+                $message->to($user->email, $user->first_name . ' ' . $user->last_name)
+                        ->subject('Di3t Club');
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Welcome email failed for user ' . $user->id . ': ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => true,

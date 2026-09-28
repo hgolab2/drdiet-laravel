@@ -582,7 +582,7 @@ class DietMealController extends Controller
         }
         if ($request->filled('mealCategories')) {
             DietMealCategory::where('meal_id', $meal->id)->delete();
-            foreach ($request->mealCategories as $categoryId) {
+            foreach ($request->mealCategories ?? [] as $categoryId) {
                 DietMealCategory::create([
                     'meal_id' => $meal->id,
                     'meal_category_id' => $categoryId
@@ -721,7 +721,7 @@ class DietMealController extends Controller
             ]);
         }
 
-        foreach ($request->mealCategories as $categoryId) {
+        foreach ($request->mealCategories ?? [] as $categoryId) {
             DietMealCategory::create([
                 'meal_id' => $meal->id,
                 'meal_category_id' => $categoryId

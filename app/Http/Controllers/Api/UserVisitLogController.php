@@ -195,6 +195,11 @@ class UserVisitLogController extends Controller
  */
     public function report(Request $request): JsonResponse
 {
+    // فرانت فقط from/to می‌فرستد؛ در این حالت period را custom در نظر می‌گیریم
+    if (!$request->filled('period') && $request->filled('from') && $request->filled('to')) {
+        $request->merge(['period' => 'custom']);
+    }
+
     $validated = $request->validate([
         'period' => 'required|in:today,yesterday,week,month,year,custom',
         'from' => 'nullable|date',

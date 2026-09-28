@@ -107,6 +107,13 @@ class ExerciseProgramController extends Controller
                 foreach ($request->days as $day => $exercises) {
                     if (is_array($exercises)) {
                         foreach ($exercises as $exercise_id) {
+                            // فرانت ممکن است آبجکت {"exercise_id": 104} بفرستد نه عدد خالی
+                            if (is_array($exercise_id)) {
+                                $exercise_id = $exercise_id['exercise_id'] ?? null;
+                            }
+                            if (!$exercise_id) {
+                                continue;
+                            }
                             ExerciseProgramItem::create([
                                 'exercise_program_id' => $program->id,
                                 'exercise_id' => $exercise_id,
@@ -121,6 +128,12 @@ class ExerciseProgramController extends Controller
                 foreach ($request->days as $day => $muscles) {
                     if (is_array($muscles)) {
                         foreach ($muscles as $muscle_id) {
+                            if (is_array($muscle_id)) {
+                                $muscle_id = $muscle_id['muscle_id'] ?? null;
+                            }
+                            if (!$muscle_id) {
+                                continue;
+                            }
                             ExerciseProgramItem::create([
                                 'exercise_program_id' => $program->id,
                                 'muscle_id' => $muscle_id,
@@ -324,6 +337,13 @@ class ExerciseProgramController extends Controller
                 foreach ($request->days as $day => $exercises) {
                     if (is_array($exercises)) {
                         foreach ($exercises as $exercise_id) {
+                            // فرانت ممکن است آبجکت {"exercise_id": 104} بفرستد نه عدد خالی
+                            if (is_array($exercise_id)) {
+                                $exercise_id = $exercise_id['exercise_id'] ?? null;
+                            }
+                            if (!$exercise_id) {
+                                continue;
+                            }
                             ExerciseProgramItem::create([
                                 'exercise_program_id' => $program->id,
                                 'exercise_id' => $exercise_id,
@@ -338,6 +358,12 @@ class ExerciseProgramController extends Controller
                 foreach ($request->days as $day => $muscles) {
                     if (is_array($muscles)) {
                         foreach ($muscles as $muscle_id) {
+                            if (is_array($muscle_id)) {
+                                $muscle_id = $muscle_id['muscle_id'] ?? null;
+                            }
+                            if (!$muscle_id) {
+                                continue;
+                            }
                             ExerciseProgramItem::create([
                                 'exercise_program_id' => $program->id,
                                 'muscle_id' => $muscle_id,

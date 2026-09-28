@@ -52,6 +52,7 @@ Route::prefix('exercises')->group(function () {
     Route::get('/{id}', [ExerciseController::class, 'show']);
     Route::post('/', [ExerciseController::class, 'store']);
     Route::post('/{id}', [ExerciseController::class, 'update']);
+    Route::put('/{id}', [ExerciseController::class, 'update']);
     Route::delete('/{id}', [ExerciseController::class, 'destroy']);
 });
 Route::get('/muscles', [ExerciseController::class, 'muscleLists']);
@@ -62,10 +63,10 @@ Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback
 
 
 Route::prefix('payments')->group(function () {
-    Route::get('/', [PaymentController::class, 'index']);
+    Route::middleware('auth:api')->get('/', [PaymentController::class, 'index']);
     Route::post('/', [PaymentController::class, 'store']);
-    Route::put('/{id}', [PaymentController::class, 'update']);
-    Route::delete('/{id}', [PaymentController::class, 'destroy']);
+    Route::middleware('auth:api')->put('/{id}', [PaymentController::class, 'update']);
+    Route::middleware('auth:api')->delete('/{id}', [PaymentController::class, 'destroy']);
 });
 
 Route::get('/transactions/handleReturn', [PaymentController::class,'handleReturn']);
@@ -82,6 +83,7 @@ Route::prefix('subscriptions')->group(function () {
     Route::delete('/{id}', [SubscriptionController::class, 'destroy']);
 });
 Route::post('/addSubscriptions', [SubscriptionController::class, 'addSubscriptions']);
+Route::get('/currencies', [SubscriptionController::class, 'currencies']);
 
 
 Route::prefix('calories')->group(function () {

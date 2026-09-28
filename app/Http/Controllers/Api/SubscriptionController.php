@@ -15,7 +15,9 @@ use App\Models\DietWeeklyMeal;
 use App\Models\DietMealItem;
 use App\Enums\MealType;
 use App\Enums\DailyActivityLevel;
+use App\Enums\Currency;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class SubscriptionController extends Controller
@@ -291,8 +293,15 @@ class SubscriptionController extends Controller
      *                     @OA\Property(property="id", type="integer"),
      *                     @OA\Property(property="user_id", type="integer"),
      *                     @OA\Property(property="user", type="string", nullable=true),
+     *                     @OA\Property(property="phone", type="string", nullable=true),
+     *                     @OA\Property(property="country_id", type="integer", nullable=true),
+     *                     @OA\Property(property="country", type="string", nullable=true),
      *                     @OA\Property(property="plan_id", type="integer"),
      *                     @OA\Property(property="price", type="number", format="float", nullable=true),
+     *                     @OA\Property(property="currency", type="integer", nullable=true),
+     *                     @OA\Property(property="currency_code", type="string", nullable=true),
+     *                     @OA\Property(property="currency_label", type="string", nullable=true),
+     *                     @OA\Property(property="created_at", type="string", format="date-time"),
      *                     @OA\Property(property="payment_id", type="string", nullable=true),
      *                     @OA\Property(property="status", type="string"),
      *                     @OA\Property(property="start_date", type="string", format="date", nullable=true),
@@ -306,12 +315,11 @@ class SubscriptionController extends Controller
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
-        if (!$user || !$user->is_superuser) {
-            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        if (!$this->canManage()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
         $pageSize = (int)($request->pagesize ?? 20);
-        $query = Subscription::query();
+        $query = Subscription::query()->with('user.country');
 
         if ($request->filled('user_id')) {
             $query->where('user_id',  $request->user_id);
@@ -326,21 +334,13 @@ class SubscriptionController extends Controller
             $query->where('registration_type',  $request->registration_type);
         }
 
+        if ($request->filled('currency')) {
+            $query->where('currency',  $request->currency);
+        }
+
         $totalCount = $query->count();
         $items = $query->orderBy('id', 'desc')->paginate($pageSize);
-        $items = array_map(function ($item) {
-            return [
-                'id' => $item->id,
-                'user_id' => $item->user_id,
-                'user' => $item->user != null ? $item->user->first_name.' '.$item->user->last_name : null,
-                'plan_id' => $item->plan_id,
-                'price' => $item->price,
-                'payment_id' => $item->payment_id,
-                'status' => $item->status,
-                'start_date' => $item->start_date,
-                'registration_type' => $item->registration_type,
-            ];
-        }, $items->items());
+        $items = array_map(fn ($item) => $this->formatSubscription($item), $items->items());
 
         return response()->json([
             'result' => $items,
@@ -361,7 +361,8 @@ class SubscriptionController extends Controller
      *             required={"user_id","plan_id"},
      *             @OA\Property(property="user_id", type="integer"),
      *             @OA\Property(property="plan_id", type="integer"),
-     *             @OA\Property(property="price", type="number", format="float", nullable=true),
+     *             @OA\Property(property="price", type="number", format="float", nullable=true, description="مبلغ پرداخت شده"),
+     *             @OA\Property(property="currency", type="integer", nullable=true, description="شناسه واحد پولی از /api/currencies"),
      *             @OA\Property(property="payment_id", type="string", maxLength=100, nullable=true),
      *             @OA\Property(property="status", type="string", enum={"active","expired","cancelled","pending"}, nullable=true),
      *             @OA\Property(property="start_date", type="string", format="date", nullable=true),
@@ -373,58 +374,39 @@ class SubscriptionController extends Controller
      */
     public function store(Request $request)
     {
-        $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert' , 'support'])) {
+        if (!$this->canManage()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $data = $request->validate([
             'user_id'    => 'required|exists:diet_users,id',
-            'plan_id'    => 'nullable|numeric',
+            'plan_id'    => 'nullable|integer',
             'price'      => 'nullable|numeric',
+            'currency'   => ['nullable', Rule::enum(Currency::class)],
             'payment_id' => 'nullable|string|max:100',
             'status'     => 'nullable|in:active,expired,cancelled,pending',
             'start_date' => 'nullable|date',
             'registration_type' => 'nullable|in:nutrition,nutrition_exercise',
         ]);
         $data['registration_type'] = $data['registration_type'] ?? 'nutrition';
-        if ($data['plan_id']>0) {
-            $calorie = Subscription::create($data);
-        }
-        // پیدا کردن کاربر مربوطه
+        $data['plan_id'] = (int) ($data['plan_id'] ?? 0);
+
         $dietUser = User::find($data['user_id']);
-        if ($dietUser /*&& $data['plan_id']*/ && $data['status']=='active') {
 
-            if ($data['plan_id']>0) {
-                $days = $data['plan_id'];
-
-                $expireAt = $dietUser->expire_at;
-
-                // اگر قبلاً تاریخ داشت و هنوز منقضی نشده
-                if ($expireAt && Carbon::parse($expireAt)->gt(Carbon::today())) {
-                    $dietUser->expire_at = Carbon::parse($expireAt)->addDays($days);
-                } else {
-                    // اگر تاریخ نداشت یا منقضی شده بود
-                    $dietUser->expire_at = Carbon::now()->addDays($days);
-                }
-
-
-                $dietUser->save();
+        // plan_id منفی یعنی کم کردن روز از اشتراک کاربر؛ رکوردی ساخته نمی‌شود
+        if ($data['plan_id'] <= 0) {
+            if (($data['status'] ?? null) == 'active') {
+                $this->adjustExpireAt($dietUser, $data['plan_id']);
             }
-            elseif ($data['plan_id']<0) {
-                $days = -1 * $data['plan_id'];
-
-                $expireAt = $dietUser->expire_at;
-
-                // اگر قبلاً تاریخ داشت و هنوز منقضی نشده
-                if ($expireAt && Carbon::parse($expireAt)->gt(Carbon::today())) {
-                    $dietUser->expire_at = Carbon::parse($expireAt)->removeDays($days);
-                } 
-
-
-                $dietUser->save();
-            }
+            return response()->json([
+                'message' => 'اشتراکی ثبت نشد؛ فقط تاریخ انقضای کاربر به‌روز شد.',
+                'expire_at' => $dietUser?->expire_at,
+            ]);
         }
-        return response()->json($calorie, 201);
+
+        $subscription = Subscription::create($data);
+        $this->adjustExpireAt($dietUser, $this->effectiveDays($subscription));
+
+        return response()->json($this->formatSubscription($subscription->load('user.country')), 201);
     }
 
     /**
@@ -447,7 +429,8 @@ class SubscriptionController extends Controller
      *             required={"user_id","plan_id"},
      *             @OA\Property(property="user_id", type="integer"),
      *             @OA\Property(property="plan_id", type="integer"),
-     *             @OA\Property(property="price", type="number", format="float", nullable=true),
+     *             @OA\Property(property="price", type="number", format="float", nullable=true, description="مبلغ پرداخت شده"),
+     *             @OA\Property(property="currency", type="integer", nullable=true, description="شناسه واحد پولی از /api/currencies"),
      *             @OA\Property(property="payment_id", type="string", maxLength=100, nullable=true),
      *             @OA\Property(property="status", type="string", enum={"active","expired","cancelled","pending"}, nullable=true),
      *             @OA\Property(property="start_date", type="string", format="date", nullable=true),
@@ -460,26 +443,39 @@ class SubscriptionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert' , 'support'])) {
+        if (!$this->canManage()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        $calorie = Subscription::find($id);
-        if (!$calorie) {
+        $subscription = Subscription::find($id);
+        if (!$subscription) {
             return response()->json(['message' => 'رکورد یافت نشد'], 404);
         }
         $data = $request->validate([
             'user_id'    => 'required|exists:diet_users,id',
-            'plan_id'    => 'nullable|numeric',
+            'plan_id'    => 'nullable|integer|min:1',
             'price'      => 'nullable|numeric',
+            'currency'   => ['nullable', Rule::enum(Currency::class)],
             'payment_id' => 'nullable|string|max:100',
             'status'     => 'nullable|in:active,expired,cancelled,pending',
             'start_date' => 'nullable|date',
             'registration_type' => 'nullable|in:nutrition,nutrition_exercise',
         ]);
 
-        $calorie->update($data);
-        return response()->json($calorie);
+        // اثر قبلی اشتراک روی تاریخ انقضا را برمی‌گردانیم و اثر جدید را اعمال می‌کنیم
+        $oldUserId = $subscription->user_id;
+        $oldDays = $this->effectiveDays($subscription);
+
+        $subscription->update($data);
+        $newDays = $this->effectiveDays($subscription);
+
+        if ($oldUserId == $subscription->user_id) {
+            $this->adjustExpireAt(User::find($oldUserId), $newDays - $oldDays);
+        } else {
+            $this->adjustExpireAt(User::find($oldUserId), -$oldDays);
+            $this->adjustExpireAt(User::find($subscription->user_id), $newDays);
+        }
+
+        return response()->json($this->formatSubscription($subscription->load('user.country')));
     }
 
     /**
@@ -503,30 +499,107 @@ class SubscriptionController extends Controller
      */
     public function destroy($id)
     {
-        $user = Auth::user();
-        if (!$user || !$user->is_superuser) {
-            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        if (!$this->canManage(['super_admin'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
         $subscription = Subscription::find($id);
         if (!$subscription) {
-        return response()->json(['message' => 'رکورد یافت نشد'], 404);
+            return response()->json(['message' => 'رکورد یافت نشد'], 404);
         }
 
-        $dietUser = User::find($subscription->user_id);
-        if ($dietUser && $subscription->plan_id && $subscription->status == 'active') {
-            $days = $subscription->plan_id;
-            if ($dietUser->expire_at) {
-                $dietUser->expire_at = Carbon::parse($dietUser->expire_at)->subDays($days);
-            } else {
-                $dietUser->expire_at = null;
-            }
-            $dietUser->save();
-        }
+        $this->adjustExpireAt(User::find($subscription->user_id), -$this->effectiveDays($subscription));
 
         $subscription->delete();
         return response()->json(['message' => 'رکورد حذف شد']);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/currencies",
+     *     summary="لیست واحدهای پولی",
+     *     tags={"Enums"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="لیست موفق",
+     *         @OA\JsonContent(type="array", @OA\Items(
+     *             @OA\Property(property="id", type="integer"),
+     *             @OA\Property(property="code", type="string"),
+     *             @OA\Property(property="label", type="string")
+     *         ))
+     *     )
+     * )
+     */
+    public function currencies()
+    {
+        $list = collect(Currency::cases())->map(fn ($item) => [
+            'id' => $item->value,
+            'code' => $item->code(),
+            'label' => $item->label(),
+        ]);
+
+        return response()->json($list);
+    }
+
+    private function canManage(array $roles = ['super_admin', 'sales_expert', 'support']): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasAnyRole($roles);
+    }
+
+    // تعداد روزی که این اشتراک به تاریخ انقضای کاربر اضافه کرده است
+    private function effectiveDays(Subscription $subscription): int
+    {
+        return ($subscription->status == 'active' && $subscription->plan_id > 0)
+            ? (int) $subscription->plan_id
+            : 0;
+    }
+
+    // $days مثبت: اضافه به اشتراک فعال یا از امروز. منفی: کم کردن فقط اگر اشتراک هنوز فعال باشد
+    private function adjustExpireAt(?User $dietUser, int $days): void
+    {
+        if (!$dietUser || $days == 0) {
+            return;
+        }
+
+        $expireAt = $dietUser->expire_at ? Carbon::parse($dietUser->expire_at) : null;
+        $isActive = $expireAt && $expireAt->gt(Carbon::today());
+
+        if ($days > 0) {
+            $dietUser->expire_at = ($isActive ? $expireAt : Carbon::now())->addDays($days);
+        } elseif ($isActive) {
+            $dietUser->expire_at = $expireAt->subDays(-$days);
+        } else {
+            return;
+        }
+
+        $dietUser->save();
+    }
+
+    private function formatSubscription(Subscription $item): array
+    {
+        $dietUser = $item->user;
+        $currency = $item->currency ? Currency::tryFrom((int) $item->currency) : null;
+
+        return [
+            'id' => $item->id,
+            'user_id' => $item->user_id,
+            'user' => $dietUser ? trim($dietUser->first_name . ' ' . $dietUser->last_name) : null,
+            'phone' => $dietUser?->phone,
+            'country_id' => $dietUser?->country_id,
+            'country' => $dietUser?->country?->name,
+            'plan_id' => $item->plan_id,
+            'price' => $item->price,
+            'currency' => $currency?->value,
+            'currency_code' => $currency?->code(),
+            'currency_label' => $currency?->label(),
+            'payment_id' => $item->payment_id,
+            'status' => $item->status,
+            'start_date' => $item->start_date,
+            'registration_type' => $item->registration_type,
+            'created_at' => $item->created_at?->format('Y-m-d H:i:s'),
+        ];
+    }
 
     public function handleBankCallback()
     {

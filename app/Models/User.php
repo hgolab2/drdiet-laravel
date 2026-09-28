@@ -82,6 +82,11 @@ class User extends Authenticatable
         return $this->hasAnyRole('super_admin') ? true : false;
     }
 
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country_id');
+    }
+
     public function dietUserWeeklies()
     {
         return $this->hasMany(DietUserWeekly::class, 'userId');
