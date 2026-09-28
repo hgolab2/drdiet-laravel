@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\DietUserWeekly;
 use App\Models\DietUserWeeklyItem;
+use App\Models\DietTip;
+use App\Models\DietUserAdherenceDay;
 use App\Models\User;
 use App\Models\DietWeeklyMeal;
 use App\Models\DietItem;
@@ -1464,6 +1466,7 @@ class DietUserWeeklyController extends Controller
             'calories' => $weekly->calories,
             'created_at' => $weekly->created_at,
             'updated_at' => $weekly->updated_at,
+            'tips' => DietTip::forDietType($weekly->user?->diet_type_id),
             'items' => [],
         ];
 
@@ -1552,6 +1555,7 @@ class DietUserWeeklyController extends Controller
             return response()->json([],200);
         }
         $latestPlan = $item->dietUserWeeklies()->with(['weekly', 'items.mealItem', 'items.dietWeeklyMeal'])->orderByDesc('id')->first();
+        $this->recordAdherence($item->id, $latestPlan);
         $latestPlanOutput = null;
         $mealOrder = [
             MealType::Breakfast->label(),
@@ -1579,6 +1583,7 @@ class DietUserWeeklyController extends Controller
                 'weight_updatedate' => $latestPlan->weight_updatedate,
                 'created_at' => $latestPlan->created_at,
                 'updated_at' => $latestPlan->updated_at,
+                'tips' => DietTip::forDietType($item->diet_type_id),
                 'items' => [],
             ];
 
@@ -1692,6 +1697,7 @@ class DietUserWeeklyController extends Controller
         $dietTypeLabel = $item->diet_type_id ? DietType::from($item->diet_type_id)->label() : null;
 
         $latestPlan = $item->dietUserWeeklies()->with(['weekly', 'items.mealItem', 'items.dietWeeklyMeal', 'items.meal', 'items.meal.image'])->orderByDesc('id')->first();
+        $this->recordAdherence($item->id, $latestPlan);
         $subscriptionDay = $item->expire_at ? Carbon::parse($item->expire_at)->diffInDays(Carbon::today(), false) : null;
         $latestPlanOutput = null;
         $mealOrder = [
@@ -1719,6 +1725,7 @@ class DietUserWeeklyController extends Controller
 
                 'created_at' => $latestPlan->created_at,
                 'updated_at' => $latestPlan->updated_at,
+                'tips' => DietTip::forDietType($item->diet_type_id),
                 'items' => [],
             ];
 
@@ -1817,6 +1824,266 @@ class DietUserWeeklyController extends Controller
 
 
 
+
+    /**
+     * @OA\Get(
+     *     path="/api/today-calories",
+     *     summary="کالری روز و کالری هر وعده از برنامه غذایی کاربر",
+     *     description="روز برنامه (۱ تا ۷) از روی fromdate آخرین برنامه غذایی کاربر حساب می‌شود. اگر برنامه تمام شده باشد 404 برمی‌گردد. کاربر عادی فقط اطلاعات خودش را می‌گیرد؛ کارشناس‌ها می‌توانند user_id بفرستند.",
+     *     tags={"Diet"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="date", in="query", required=false, description="تاریخ (پیش‌فرض امروز)", @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="user_id", in="query", required=false, description="فقط برای کارشناس‌ها", @OA\Schema(type="integer")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="موفق",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="user_id", type="integer"),
+     *             @OA\Property(property="user_weekly_id", type="integer"),
+     *             @OA\Property(property="date", type="string", format="date"),
+     *             @OA\Property(property="plan_day", type="integer", example=3),
+     *             @OA\Property(property="fromdate", type="string", format="date"),
+     *             @OA\Property(property="todate", type="string", format="date"),
+     *             @OA\Property(property="target_calories", type="number", description="کالری هدف روزانه برنامه"),
+     *             @OA\Property(property="total_calories", type="number", description="مجموع کالری وعده‌های این روز"),
+     *             @OA\Property(property="meals", type="array", @OA\Items(
+     *                 @OA\Property(property="meal_type_id", type="integer"),
+     *                 @OA\Property(property="meal_type", type="string"),
+     *                 @OA\Property(property="calories", type="number"),
+     *                 @OA\Property(property="items", type="array", @OA\Items(
+     *                     @OA\Property(property="mealId", type="integer"),
+     *                     @OA\Property(property="mealItemId", type="integer"),
+     *                     @OA\Property(property="itemTitle", type="string"),
+     *                     @OA\Property(property="unit", type="string"),
+     *                     @OA\Property(property="unitCount", type="number"),
+     *                     @OA\Property(property="calories", type="number")
+     *                 ))
+     *             ))
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="دسترسی غیرمجاز"),
+     *     @OA\Response(response=403, description="دسترسی به کاربر دیگر مجاز نیست"),
+     *     @OA\Response(response=404, description="کاربر برنامه غذایی ندارد یا برنامه تمام شده است"),
+     *     @OA\Response(response=422, description="برنامه هنوز شروع نشده یا ورودی نامعتبر")
+     * )
+     */
+    public function todayCalories(Request $request)
+    {
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        }
+
+        $request->validate([
+            'date' => 'nullable|date',
+            'user_id' => 'nullable|integer|exists:diet_users,id',
+        ]);
+
+        $userId = $authUser->id;
+        if ($request->filled('user_id') && $request->user_id != $authUser->id) {
+            if (!$authUser->hasAnyRole(['super_admin', 'nutrition_expert', 'support'])) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            $userId = (int) $request->user_id;
+        }
+
+        $plan = DietUserWeekly::with(['items.dietWeeklyMeal', 'items.mealItem'])
+            ->where('userId', $userId)
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$plan) {
+            return response()->json(['message' => 'کاربر برنامه غذایی ندارد.'], 404);
+        }
+
+        $date = $request->filled('date') ? Carbon::parse($request->date)->startOfDay() : Carbon::today();
+        $fromDate = Carbon::parse($plan->fromdate)->startOfDay();
+        $diff = (int) floor($fromDate->diffInDays($date, false));
+
+        if ($diff < 0) {
+            return response()->json(['message' => 'برنامه غذایی هنوز شروع نشده است.', 'fromdate' => $plan->fromdate], 422);
+        }
+
+        // روزهای برنامه ۱ تا ۷ هستند؛ todate روز بعد از پایان برنامه است
+        $toDate = $plan->todate ? Carbon::parse($plan->todate)->startOfDay() : $fromDate->copy()->addDays(7);
+        if ($diff >= 7 || $date->gte($toDate)) {
+            return response()->json(['message' => 'برنامه غذایی کاربر به پایان رسیده است.', 'todate' => $plan->todate], 404);
+        }
+
+        $planDay = $diff + 1;
+
+        // فقط وقتی خود کاربر برنامه امروزش را چک می‌کند پایبندی ثبت می‌شود
+        if ($userId == $authUser->id && !$request->filled('date')) {
+            $this->recordAdherence($userId, $plan);
+        }
+
+        $mealOrder = [
+            MealType::Breakfast->value,
+            MealType::MorningSnack->value,
+            MealType::PreLunch->value,
+            MealType::Lunch->value,
+            MealType::AfternoonSnack2->value,
+            MealType::Dinner->value,
+            MealType::AfterDinner->value,
+            MealType::SugarPortion->value,
+            MealType::DairyPortion->value,
+            MealType::FatPortion->value,
+        ];
+
+        $meals = [];
+        foreach ($plan->items as $planItem) {
+            $weeklyMeal = $planItem->dietWeeklyMeal;
+            if (!$weeklyMeal || (int) $weeklyMeal->day !== $planDay || !$weeklyMeal->mealTypeId) {
+                continue;
+            }
+
+            $typeId = (int) $weeklyMeal->mealTypeId;
+            if (!isset($meals[$typeId])) {
+                $meals[$typeId] = [
+                    'meal_type_id' => $typeId,
+                    'meal_type' => MealType::tryFrom($typeId)?->label(),
+                    'calories' => 0,
+                    'items' => [],
+                ];
+            }
+
+            $calories = (float) ($planItem->calories ?? 0);
+            $meals[$typeId]['calories'] += $calories;
+            $meals[$typeId]['items'][] = [
+                'mealId' => $planItem->mealId,
+                'mealItemId' => $planItem->mealItemId,
+                'itemTitle' => $planItem->mealItem?->name,
+                'unit' => $planItem->mealItem?->unit,
+                'unitCount' => $planItem->unitCount,
+                'calories' => round($calories, 1),
+            ];
+        }
+
+        uksort($meals, function ($a, $b) use ($mealOrder) {
+            $posA = array_search($a, $mealOrder);
+            $posB = array_search($b, $mealOrder);
+            return ($posA === false ? PHP_INT_MAX : $posA) <=> ($posB === false ? PHP_INT_MAX : $posB);
+        });
+
+        $totalCalories = 0;
+        foreach ($meals as &$meal) {
+            $totalCalories += $meal['calories'];
+            $meal['calories'] = round($meal['calories'], 1);
+        }
+        unset($meal);
+
+        return response()->json([
+            'user_id' => $userId,
+            'user_weekly_id' => $plan->id,
+            'date' => $date->toDateString(),
+            'plan_day' => $planDay,
+            'fromdate' => $plan->fromdate,
+            'todate' => $plan->todate,
+            'target_calories' => $plan->calories !== null ? round((float) $plan->calories, 1) : null,
+            'total_calories' => round($totalCalories, 1),
+            'meals' => array_values($meals),
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/adherence",
+     *     summary="میزان پایبندی کاربر به برنامه غذایی",
+     *     description="هر روزی که کاربر در بازه برنامه‌اش برنامه غذایی را چک کند یک روز پایبندی حساب می‌شود (حداکثر یک روز در هر روز). کاربر عادی فقط اطلاعات خودش را می‌گیرد؛ کارشناس‌ها می‌توانند user_id بفرستند.",
+     *     tags={"Diet"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="user_id", in="query", required=false, description="فقط برای کارشناس‌ها", @OA\Schema(type="integer")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="موفق",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="user_id", type="integer"),
+     *             @OA\Property(property="total_days", type="integer", description="کل روزهای پایبندی"),
+     *             @OA\Property(property="last_checked_date", type="string", format="date", nullable=true),
+     *             @OA\Property(property="current_plan", type="object", nullable=true,
+     *                 @OA\Property(property="user_weekly_id", type="integer"),
+     *                 @OA\Property(property="fromdate", type="string", format="date"),
+     *                 @OA\Property(property="todate", type="string", format="date"),
+     *                 @OA\Property(property="elapsed_days", type="integer", description="روزهای سپری‌شده از برنامه تا امروز (حداکثر ۷)"),
+     *                 @OA\Property(property="checked_days", type="integer", description="روزهای پایبندی در این برنامه"),
+     *                 @OA\Property(property="percent", type="number", description="درصد پایبندی در این برنامه")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="دسترسی غیرمجاز"),
+     *     @OA\Response(response=403, description="دسترسی به کاربر دیگر مجاز نیست")
+     * )
+     */
+    public function adherence(Request $request)
+    {
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        }
+
+        $request->validate([
+            'user_id' => 'nullable|integer|exists:diet_users,id',
+        ]);
+
+        $userId = $authUser->id;
+        if ($request->filled('user_id') && $request->user_id != $authUser->id) {
+            if (!$authUser->hasAnyRole(['super_admin', 'nutrition_expert', 'support'])) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            $userId = (int) $request->user_id;
+        }
+
+        $days = DietUserAdherenceDay::where('user_id', $userId);
+        $lastChecked = (clone $days)->max('date');
+
+        $currentPlan = null;
+        $plan = DietUserWeekly::where('userId', $userId)->orderByDesc('id')->first();
+        if ($plan) {
+            $fromDate = Carbon::parse($plan->fromdate)->startOfDay();
+            $toDate = $plan->todate ? Carbon::parse($plan->todate)->startOfDay() : $fromDate->copy()->addDays(7);
+            $diff = (int) floor($fromDate->diffInDays(Carbon::today(), false));
+            $elapsedDays = max(0, min($diff + 1, (int) $fromDate->diffInDays($toDate)));
+
+            $checkedDays = (clone $days)
+                ->where('date', '>=', $fromDate->toDateString())
+                ->where('date', '<', $toDate->toDateString())
+                ->count();
+
+            $currentPlan = [
+                'user_weekly_id' => $plan->id,
+                'fromdate' => $plan->fromdate,
+                'todate' => $plan->todate,
+                'elapsed_days' => $elapsedDays,
+                'checked_days' => $checkedDays,
+                'percent' => $elapsedDays > 0 ? round($checkedDays * 100 / $elapsedDays, 1) : 0,
+            ];
+        }
+
+        return response()->json([
+            'user_id' => $userId,
+            'total_days' => (clone $days)->count(),
+            'last_checked_date' => $lastChecked,
+            'current_plan' => $currentPlan,
+        ]);
+    }
+
+    // ثبت روز پایبندی، فقط اگر امروز داخل بازه برنامه باشد
+    private function recordAdherence(int $userId, ?DietUserWeekly $plan): void
+    {
+        if (!$plan || !$plan->fromdate) {
+            return;
+        }
+
+        $today = Carbon::today();
+        $fromDate = Carbon::parse($plan->fromdate)->startOfDay();
+        $toDate = $plan->todate ? Carbon::parse($plan->todate)->startOfDay() : $fromDate->copy()->addDays(7);
+
+        if ($today->lt($fromDate) || $today->gte($toDate)) {
+            return;
+        }
+
+        DietUserAdherenceDay::recordToday($userId, $plan->id);
+    }
 
     /**
      * @OA\Delete(

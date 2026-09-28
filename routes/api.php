@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DietItemController;
 use App\Http\Controllers\Api\DietMealController;
 use App\Http\Controllers\Api\DietWeeklyController;
 use App\Http\Controllers\Api\DietUserWeeklyController;
+use App\Http\Controllers\Api\DietTipController;
 use App\Http\Controllers\Api\CalorieController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -104,6 +105,14 @@ Route::post('/updateWeight', [DietUserWeeklyController::class, 'updateWeight']);
 
 Route::delete('/user-weekly/{id}', [DietUserWeeklyController::class, 'destroy']);
 
+// نکات کارشناس (بر اساس نوع رژیم)
+Route::prefix('diet-tips')->group(function () {
+    Route::get('/', [DietTipController::class, 'index']);
+    Route::get('/user', [DietTipController::class, 'userTips']);
+    Route::post('/', [DietTipController::class, 'store']);
+    Route::put('/{id}', [DietTipController::class, 'update']);
+    Route::delete('/{id}', [DietTipController::class, 'destroy']);
+});
 Route::get('/diet-weekly', [DietWeeklyController::class, 'index']);
 Route::get('/diet-weekly/{id}', [DietWeeklyController::class, 'show']);
 Route::post('/diet-weekly', [DietWeeklyController::class, 'store']);
@@ -150,6 +159,8 @@ Route::post('/createUser', [AuthController::class, 'createUser'])->name('createU
 Route::post('/userlogin', [AuthController::class, 'login'])->name('userlogin');
 Route::get('/last-user-weekly', [DietUserWeeklyController::class, 'lastUserWeekly']);
 Route::get('/last-user-weekly-items', [DietUserWeeklyController::class, 'lastUserWeeklyItems']);
+Route::get('/today-calories', [DietUserWeeklyController::class, 'todayCalories']);
+Route::get('/adherence', [DietUserWeeklyController::class, 'adherence']);
 
 Route::get('/food-cultures', [DietUserController::class, 'foodCultureList']);
 Route::get('/diet/types', [DietUserController::class, 'dietTypes']);
