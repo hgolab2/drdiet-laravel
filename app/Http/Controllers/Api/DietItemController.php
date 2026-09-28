@@ -69,6 +69,9 @@ class DietItemController extends Controller
      *                 @OA\Property(property="name", type="string", example="سیب"),
      *                 @OA\Property(property="unit", type="string", example="عدد"),
      *                 @OA\Property(property="caloriesGram", type="number", format="float", example=52.3),
+     *                 @OA\Property(property="proteinGram", type="number", format="float", nullable=true, example=0.003, description="پروتئین در هر گرم"),
+     *                 @OA\Property(property="carbsGram", type="number", format="float", nullable=true, example=0.14, description="کربوهیدرات در هر گرم"),
+     *                 @OA\Property(property="fatGram", type="number", format="float", nullable=true, example=0.002, description="چربی (دهون) در هر گرم"),
      *                 @OA\Property(property="weightUnit", type="integer", example=1),
      *                 @OA\Property(property="foodCulture", type="string", example="ایرانی"),
      *                 @OA\Property(property="foodCultureId", type="integer", example=2),
@@ -108,6 +111,9 @@ class DietItemController extends Controller
                 'name' => $item->name,
                 'unit' => $item->unit,
                 'caloriesGram' => $item->caloriesGram,
+                'proteinGram' => $item->proteinGram,
+                'carbsGram' => $item->carbsGram,
+                'fatGram' => $item->fatGram,
                 'weightUnit' => $item->weightUnit,
                 'foodCulture' => $item->foodCultureId ? FoodCulture::from($item->foodCultureId)->label() : null,
                 'foodCultureId' => $item->foodCultureId,
@@ -137,6 +143,9 @@ class DietItemController extends Controller
      *             @OA\Property(property="name", type="string", example="برنج"),
      *             @OA\Property(property="unit", type="string", example="گرم"),
      *             @OA\Property(property="caloriesGram", type="number", format="float", example=120),
+     *             @OA\Property(property="proteinGram", type="number", format="float", nullable=true, example=0.027, description="پروتئین در هر گرم"),
+     *             @OA\Property(property="carbsGram", type="number", format="float", nullable=true, example=0.28, description="کربوهیدرات در هر گرم"),
+     *             @OA\Property(property="fatGram", type="number", format="float", nullable=true, example=0.003, description="چربی (دهون) در هر گرم"),
      *             @OA\Property(property="weightUnit", type="int", example=5),
      *             @OA\Property(property="foodCultureId", type="integer", example=1),
      *             @OA\Property(property="atLeast", type="number", format="float", example=50)
@@ -151,6 +160,9 @@ class DietItemController extends Controller
      *             @OA\Property(property="name", type="string", example="برنج"),
      *             @OA\Property(property="unit", type="string", example="گرم"),
      *             @OA\Property(property="caloriesGram", type="number", format="float", example=120),
+     *             @OA\Property(property="proteinGram", type="number", format="float", nullable=true, example=0.027, description="پروتئین در هر گرم"),
+     *             @OA\Property(property="carbsGram", type="number", format="float", nullable=true, example=0.28, description="کربوهیدرات در هر گرم"),
+     *             @OA\Property(property="fatGram", type="number", format="float", nullable=true, example=0.003, description="چربی (دهون) در هر گرم"),
      *             @OA\Property(property="weightUnit", type="int", example=5),
      *             @OA\Property(property="foodCultureId", type="integer", example=1),
      *             @OA\Property(property="atLeast", type="number", format="float", example=50),
@@ -170,6 +182,9 @@ class DietItemController extends Controller
             'name' => 'required|string|max:800',
             'unit' => 'required|string|max:200',
             'caloriesGram' => 'nullable|numeric',
+            'proteinGram' => 'nullable|numeric|min:0',
+            'carbsGram' => 'nullable|numeric|min:0',
+            'fatGram' => 'nullable|numeric|min:0',
             'weightUnit' => 'nullable|int',
             'foodCultureId' => 'nullable|integer',
             'atLeast' => 'nullable|numeric',
@@ -210,6 +225,9 @@ class DietItemController extends Controller
      *             @OA\Property(property="name", type="string"),
      *             @OA\Property(property="unit", type="string"),
      *             @OA\Property(property="caloriesGram", type="float"),
+     *             @OA\Property(property="proteinGram", type="number", format="float", nullable=true),
+     *             @OA\Property(property="carbsGram", type="number", format="float", nullable=true),
+     *             @OA\Property(property="fatGram", type="number", format="float", nullable=true),
      *             @OA\Property(property="weightUnit", type="int"),
      *             @OA\Property(property="foodCultureId", type="integer"),
      *             @OA\Property(property="atLeast", type="number", format="float")
@@ -224,7 +242,12 @@ class DietItemController extends Controller
         $user = Auth::user();
 
         $item = DietItem::findOrFail($id);
-        $item->update($request->only(['name', 'unit', 'caloriesGram', 'weightUnit', 'foodCultureId', 'atLeast']));
+        $request->validate([
+            'proteinGram' => 'nullable|numeric|min:0',
+            'carbsGram' => 'nullable|numeric|min:0',
+            'fatGram' => 'nullable|numeric|min:0',
+        ]);
+        $item->update($request->only(['name', 'unit', 'caloriesGram', 'proteinGram', 'carbsGram', 'fatGram', 'weightUnit', 'foodCultureId', 'atLeast']));
         return response()->json($item);
     }
 
