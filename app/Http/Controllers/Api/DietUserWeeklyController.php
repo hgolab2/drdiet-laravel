@@ -20,6 +20,7 @@ use App\Enums\DailyActivityLevel;
 use App\Enums\MealType;
 use App\Enums\FoodType;
 use App\Enums\DietType;
+use App\Helpers\CalorieCalculator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -122,11 +123,7 @@ class DietUserWeeklyController extends Controller
         $height = $dietUser->height;
         $gender = $dietUser->gender;
 
-        if ($gender === 'male') {
-            $bmr = (10 * $weight) + (6.25 * $height) - (5 * $age) + 5;
-        } elseif ($gender === 'female') {
-            $bmr = (10 * $weight) + (6.25 * $height) - (5 * $age) - 161;
-        } else {
+        if (!in_array($gender, ['male', 'female'], true)) {
             return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
         }
 
@@ -135,39 +132,12 @@ class DietUserWeeklyController extends Controller
         if (!$activityLevel) {
             return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
         }
-        $rR = match ($activityLevel) {
-            DailyActivityLevel::سبک => 1.2,
-            DailyActivityLevel::متوسط => 1.55,
-            DailyActivityLevel::شدید,
-            DailyActivityLevel::بسیار_شدید => 1.72,
-        };
-        $bmr = $bmr * $rR;
 
-        $targetCalories = 0;
-        switch($dietUser->diet_type_id)
-        {
-            case 1:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 1100,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 500,
-                };
-                $targetCalories = $bmr-$reductionRate;
-                break;
-            case 3:
-                $targetCalories = $bmr;
-                break;
-            case 2:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 500,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 1100,
-                };
-                $targetCalories = $bmr+$reductionRate;
-                break;
-        }
+        $targetCalories = CalorieCalculator::target(
+            $gender, $age, $height, $weight,
+            $dietUser->wrist_size, $dietUser->pregnancy_week,
+            $activityLevel, $dietUser->diet_type_id
+        );
 
 
         // اجرای عملیات در تراکنش
@@ -321,15 +291,7 @@ class DietUserWeeklyController extends Controller
             $age = Carbon::parse($birthDate)->age;
             $height = $dietUser->height;
             $gender = $dietUser->gender;
-            if ($gender === 'male')
-            {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-            }
-            elseif($gender === 'female')
-            {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-            }
-            else
+            if (!in_array($gender, ['male', 'female'], true))
             {
                 return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
             }
@@ -337,38 +299,11 @@ class DietUserWeeklyController extends Controller
             if (!$activityLevel) {
                 return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
             }
-            $rR = match ($activityLevel) {
-                DailyActivityLevel::سبک => 1.2,
-                DailyActivityLevel::متوسط => 1.55,
-                DailyActivityLevel::شدید,
-                DailyActivityLevel::بسیار_شدید => 1.72,
-            };
-            $bmr = $bmr * $rR;
-            //switch($dietUser->diet_type_id)
-            switch($user->diet_type_id)
-            {
-                case 1:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1100,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 500,
-                    };
-                    $targetCalories = $bmr-$reductionRate;
-                    break;
-                case 3:
-                    $targetCalories = $bmr;
-                    break;
-                case 2:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 500,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1100,
-                    };
-                    $targetCalories = $bmr + $reductionRate;
-                    break;
-            }
+            $targetCalories = CalorieCalculator::target(
+                $gender, $age, $height, $weight,
+                $dietUser->wrist_size, $dietUser->pregnancy_week,
+                $activityLevel, $user->diet_type_id
+            );
             $weekly2 = DietUserWeekly::create([
                 'userId' => $dietUser->id,
                 'fromdate' => $fromDate,
@@ -505,11 +440,7 @@ class DietUserWeeklyController extends Controller
             $height = $dietUser->height;
             $gender = $dietUser->gender;
 
-            if ($gender === 'male') {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-            } elseif ($gender === 'female') {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-            } else {
+            if (!in_array($gender, ['male', 'female'], true)) {
                 return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
             }
 
@@ -518,39 +449,12 @@ class DietUserWeeklyController extends Controller
             if (!$activityLevel) {
                 return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
             }
-            $rR = match ($activityLevel) {
-                DailyActivityLevel::سبک => 1.2,
-                DailyActivityLevel::متوسط => 1.55,
-                DailyActivityLevel::شدید,
-                DailyActivityLevel::بسیار_شدید => 1.72,
-            };
-            $bmr = $bmr * $rR;
 
-            $targetCalories = 0;
-            switch($dietUser->diet_type_id)
-            {
-                case 1:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1100,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 500,
-                    };
-                    $targetCalories = $bmr-$reductionRate;
-                    break;
-                case 3:
-                    $targetCalories = $bmr;
-                    break;
-                case 2:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 500,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1100,
-                    };
-                    $targetCalories = $bmr+$reductionRate;
-                    break;
-            }
+            $targetCalories = CalorieCalculator::target(
+                $gender, $age, $height, $weight,
+                $dietUser->wrist_size, $dietUser->pregnancy_week,
+                $activityLevel, $dietUser->diet_type_id
+            );
 
 
             // اجرای عملیات در تراکنش
@@ -718,11 +622,7 @@ class DietUserWeeklyController extends Controller
         $height = $dietUser->height;
         $gender = $dietUser->gender;
 
-        if ($gender === 'male') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-        } elseif ($gender === 'female') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-        } else {
+        if (!in_array($gender, ['male', 'female'], true)) {
             return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
         }
 
@@ -731,53 +631,12 @@ class DietUserWeeklyController extends Controller
         if (!$activityLevel) {
             return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
         }
-        $rR = match ($activityLevel) {
-            DailyActivityLevel::سبک => 1.2,
-            DailyActivityLevel::متوسط => 1.55,
-            DailyActivityLevel::شدید,
-            DailyActivityLevel::بسیار_شدید => 1.72,
-        };
-        $bmr = $bmr * $rR;
-        /*$bmi = $weight / (($weight/100) * ($weight/100));
-        if($bmi < 18)
-        {
-            $weight_goal_id = 2;
-        }
-        elseif($bmi > 24)
-        {
-            $weight_goal_id = 1;
-        }
-        else
-        {
-            $weight_goal_id = 3;
-        }*/
 
-
-        //switch($weight_goal_id)
-        switch($dietUser->diet_type_id)
-        {
-            case 1:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 1100,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 500,
-                };
-                $targetCalories = $bmr-$reductionRate;
-                break;
-            case 3:
-                $targetCalories = $bmr;
-                break;
-            case 2:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 500,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 1100,
-                };
-                $targetCalories = $bmr+$reductionRate;
-                break;
-        }
+        $targetCalories = CalorieCalculator::target(
+            $gender, $age, $height, $weight,
+            $dietUser->wrist_size, $dietUser->pregnancy_week,
+            $activityLevel, $dietUser->diet_type_id
+        );
 
         // به‌روزرسانی رژیم کاربر
         $weekly->update([
@@ -1005,49 +864,16 @@ class DietUserWeeklyController extends Controller
             $height = $dietUser->height;
             $gender = $dietUser->gender;
 
-            $bmr = $gender === 'male'
-                ? (10 * $weight + 6.25 * $height - 5 * $age + 5)
-                : (10 * $weight + 6.25 * $height - 5 * $age - 161);
-
             $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
             if (!$activityLevel) {
                 return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
             }
 
-            $activityMultiplier = match ($activityLevel) {
-                DailyActivityLevel::سبک => 1.2,
-                DailyActivityLevel::متوسط => 1.55,
-                DailyActivityLevel::شدید,
-                DailyActivityLevel::بسیار_شدید => 1.72,
-            };
-
-            $bmr *= $activityMultiplier;
-
-            switch ($dietUser->diet_type_id) {
-                case 1:
-                    $reduction = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1100,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 500,
-                    };
-                    $targetCalories = $bmr - $reduction;
-                    break;
-
-                case 2:
-                    $targetCalories = $bmr;
-                    break;
-
-                case 3:
-                    $increase = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 500,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1100,
-                    };
-                    $targetCalories = $bmr + $increase;
-                    break;
-            }
+            $targetCalories = CalorieCalculator::target(
+                $gender === 'male' ? 'male' : 'female', $age, $height, $weight,
+                $dietUser->wrist_size, $dietUser->pregnancy_week,
+                $activityLevel, $dietUser->diet_type_id
+            );
 
             $dietUserWeekly->update([
                 'calories' => $targetCalories,
@@ -1240,11 +1066,7 @@ class DietUserWeeklyController extends Controller
         $height = $dietUser->height;
         $gender = $dietUser->gender;
 
-        if ($gender === 'male') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-        } elseif ($gender === 'female') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-        } else {
+        if (!in_array($gender, ['male', 'female'], true)) {
             return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
         }
 
@@ -1253,39 +1075,12 @@ class DietUserWeeklyController extends Controller
         if (!$activityLevel) {
             return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
         }
-        $rR = match ($activityLevel) {
-            DailyActivityLevel::سبک => 1.2,
-            DailyActivityLevel::متوسط => 1.55,
-            DailyActivityLevel::شدید,
-            DailyActivityLevel::بسیار_شدید => 1.72,
-        };
-        $bmr = $bmr * $rR;
 
-
-        switch($dietUser->diet_type_id)
-        {
-            case 1:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 1100,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 500,
-                };
-                $targetCalories = $bmr-$reductionRate;
-                break;
-            case 2:
-                $targetCalories = $bmr;
-                break;
-            case 3:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 500,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 1100,
-                };
-                $targetCalories = $bmr+$reductionRate;
-                break;
-        }
+        $targetCalories = CalorieCalculator::target(
+            $gender, $age, $height, $weight,
+            $dietUser->wrist_size, $dietUser->pregnancy_week,
+            $activityLevel, $dietUser->diet_type_id
+        );
 
         // به‌روزرسانی رژیم کاربر
         $weekly->update([
