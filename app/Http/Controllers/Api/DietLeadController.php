@@ -440,9 +440,12 @@ class DietLeadController extends Controller
      * @OA\Get(
      *     path="/api/admin/diet-leads/source-report",
      *     summary="گزارش لیدها بر اساس منبع",
-     *     description="تعداد لیدها بر اساس source شامل آمار روزانه، هفتگی، ماهانه و کل به همراه تعداد تماس‌نگرفته‌ها",
+     *     description="تعداد لیدها بر اساس source شامل آمار روزانه، هفتگی، ماهانه و کل به همراه تعداد تماس‌نگرفته‌ها. با date_from و date_to همه ستون‌ها فقط لیدهای ثبت‌شده در آن بازه را می‌شمارند.",
      *     tags={"Diet Leads Report"},
      *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(name="date_from", in="query", required=false, description="شروع بازه (شامل). همراه date_to", @OA\Schema(type="string", format="date", example="2026-09-01")),
+     *     @OA\Parameter(name="date_to", in="query", required=false, description="پایان بازه (شامل). همراه date_from", @OA\Schema(type="string", format="date", example="2026-09-30")),
      *
      *     @OA\Response(
      *         response=200,
@@ -477,12 +480,18 @@ class DietLeadController extends Controller
      *     )
      * )
      */
-    public function sourceReport()
+    public function sourceReport(Request $request)
     {
         $user = Auth::user();
         if (!$user->hasAnyRole(['super_admin', 'marketing', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+
+        $request->validate([
+            'date_from' => 'nullable|date|required_with:date_to',
+            'date_to' => 'nullable|date|required_with:date_from|after_or_equal:date_from',
+        ]);
+
         $today = Carbon::today()->toDateString();
         $yesterday = Carbon::yesterday()->toDateString();
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
@@ -496,6 +505,13 @@ class DietLeadController extends Controller
         // گزارش بر اساس source
         // =========================
         $sourceQuery = DietLead::query();
+
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $sourceQuery->whereBetween('created_at', [
+                $request->date_from . ' 00:00:00',
+                $request->date_to . ' 23:59:59'
+            ]);
+        }
 
         /*if (!$user->isAdmin()) {
             $sourceQuery->where('expert_id', $user->id);
@@ -844,6 +860,8 @@ class DietLeadController extends Controller
      *         required=false,
      *         @OA\Schema(type="integer")
      *     ),
+     *     @OA\Parameter(name="date_from", in="query", required=false, description="شروع بازه تاریخ ثبت لید (شامل). همراه date_to", @OA\Schema(type="string", format="date", example="2026-09-01")),
+     *     @OA\Parameter(name="date_to", in="query", required=false, description="پایان بازه تاریخ ثبت لید (شامل). همراه date_from", @OA\Schema(type="string", format="date", example="2026-09-30")),
      *
      *     @OA\Response(
      *         response=200,
@@ -888,8 +906,19 @@ class DietLeadController extends Controller
         if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+        $request->validate([
+            'date_from' => 'nullable|date|required_with:date_to',
+            'date_to' => 'nullable|date|required_with:date_from|after_or_equal:date_from',
+        ]);
+
         $pageSize = (int)($request->pagesize ?? 20);
         $query = DietLead::query();
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('created_at', [
+                $request->date_from . ' 00:00:00',
+                $request->date_to . ' 23:59:59'
+            ]);
+        }
         if ($request->filled('phone')) {
             $query->where('phone', 'like', "%{$request->phone}%");
         }
