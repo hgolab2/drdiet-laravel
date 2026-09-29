@@ -541,7 +541,7 @@ class SubscriptionController extends Controller
         return response()->json($list);
     }
 
-    private function canManage(array $roles = ['super_admin', 'sales_expert', 'support']): bool
+    private function canManage(array $roles = ['super_admin', 'sales_expert', 'support', 'marketing_manager']): bool
     {
         $user = Auth::user();
         return $user && $user->hasAnyRole($roles);

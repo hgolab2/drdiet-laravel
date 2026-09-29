@@ -126,7 +126,7 @@ class DietLeadController extends Controller
     public function increaseLevel($id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -174,7 +174,7 @@ class DietLeadController extends Controller
     public function assignLevelOne()
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -480,7 +480,7 @@ class DietLeadController extends Controller
     public function sourceReport()
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'marketing'])) {
+        if (!$user->hasAnyRole(['super_admin', 'marketing', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $today = Carbon::today()->toDateString();
@@ -885,7 +885,7 @@ class DietLeadController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert' , 'support' , 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $pageSize = (int)($request->pagesize ?? 20);
@@ -1080,7 +1080,7 @@ class DietLeadController extends Controller
     public function show($id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $lead = DietLead::find($id);
@@ -1169,7 +1169,7 @@ class DietLeadController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert', 'support', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert', 'support', 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -1219,7 +1219,7 @@ class DietLeadController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $lead = DietLead::findOrFail($id);
@@ -1282,7 +1282,7 @@ class DietLeadController extends Controller
     public function statistics(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'marketing'])) {
+        if (!$user->hasAnyRole(['super_admin', 'marketing', 'marketing_manager'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 

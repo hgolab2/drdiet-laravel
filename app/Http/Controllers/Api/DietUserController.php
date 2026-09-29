@@ -699,7 +699,9 @@ class DietUserController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert' , 'support'])) {
+        // مدیر بازاریابی فقط لیست اعضای تیم (کاربران دارای نقش) را برای CRM می‌بیند، نه مشتریان
+        $teamListOnly = $user->hasRole('marketing_manager') && $request->boolean('is_role');
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert' , 'support']) && !$teamListOnly) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
