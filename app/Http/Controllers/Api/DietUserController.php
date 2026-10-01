@@ -1258,7 +1258,7 @@ class DietUserController extends Controller
             'age' => $age,
             'height' => $item->height,
             'weight' => $item->weight,
-            'target_weight' => $item->target_weight,
+            'weight' => $item->target_weight,
             'wrist_size' => $item->wrist_size,
             'pregnancy_week' => $item->pregnancy_week,
             'country_id' => $item->country_id,
