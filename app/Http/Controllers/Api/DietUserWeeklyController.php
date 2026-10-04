@@ -1846,17 +1846,26 @@ class DietUserWeeklyController extends Controller
      *             @OA\Property(property="todate", type="string", format="date"),
      *             @OA\Property(property="target_calories", type="number", description="کالری هدف روزانه برنامه"),
      *             @OA\Property(property="total_calories", type="number", description="مجموع کالری وعده‌های این روز"),
+     *             @OA\Property(property="total_protein", type="number", description="مجموع پروتئین روز (گرم)"),
+     *             @OA\Property(property="total_carbs", type="number", description="مجموع کربوهیدرات روز (گرم)"),
+     *             @OA\Property(property="total_fat", type="number", description="مجموع چربی روز (گرم)"),
      *             @OA\Property(property="meals", type="array", @OA\Items(
      *                 @OA\Property(property="meal_type_id", type="integer"),
      *                 @OA\Property(property="meal_type", type="string"),
      *                 @OA\Property(property="calories", type="number"),
+     *                 @OA\Property(property="protein", type="number"),
+     *                 @OA\Property(property="carbs", type="number"),
+     *                 @OA\Property(property="fat", type="number"),
      *                 @OA\Property(property="items", type="array", @OA\Items(
      *                     @OA\Property(property="mealId", type="integer"),
      *                     @OA\Property(property="mealItemId", type="integer"),
      *                     @OA\Property(property="itemTitle", type="string"),
      *                     @OA\Property(property="unit", type="string"),
      *                     @OA\Property(property="unitCount", type="number"),
-     *                     @OA\Property(property="calories", type="number")
+     *                     @OA\Property(property="calories", type="number"),
+     *                     @OA\Property(property="protein", type="number"),
+     *                     @OA\Property(property="carbs", type="number"),
+     *                     @OA\Property(property="fat", type="number")
      *                 ))
      *             ))
      *         )
@@ -1943,19 +1952,38 @@ class DietUserWeeklyController extends Controller
                     'meal_type_id' => $typeId,
                     'meal_type' => MealType::tryFrom($typeId)?->label(),
                     'calories' => 0,
+                    'protein' => 0,
+                    'carbs' => 0,
+                    'fat' => 0,
                     'items' => [],
                 ];
             }
 
             $calories = (float) ($planItem->calories ?? 0);
+
+            // گرم از روی کالری دقیق حساب می‌شود (unitCount گرد شده است)
+            $dietItem = $planItem->mealItem;
+            $grams = ($dietItem && (float) $dietItem->caloriesGram > 0)
+                ? $calories / (float) $dietItem->caloriesGram
+                : 0;
+            $protein = $grams * (float) ($dietItem?->proteinGram ?? 0);
+            $carbs = $grams * (float) ($dietItem?->carbsGram ?? 0);
+            $fat = $grams * (float) ($dietItem?->fatGram ?? 0);
+
             $meals[$typeId]['calories'] += $calories;
+            $meals[$typeId]['protein'] += $protein;
+            $meals[$typeId]['carbs'] += $carbs;
+            $meals[$typeId]['fat'] += $fat;
             $meals[$typeId]['items'][] = [
                 'mealId' => $planItem->mealId,
                 'mealItemId' => $planItem->mealItemId,
-                'itemTitle' => $planItem->mealItem?->name,
-                'unit' => $planItem->mealItem?->unit,
+                'itemTitle' => $dietItem?->name,
+                'unit' => $dietItem?->unit,
                 'unitCount' => $planItem->unitCount,
                 'calories' => round($calories, 1),
+                'protein' => round($protein, 1),
+                'carbs' => round($carbs, 1),
+                'fat' => round($fat, 1),
             ];
         }
 
@@ -1966,9 +1994,14 @@ class DietUserWeeklyController extends Controller
         });
 
         $totalCalories = 0;
+        $totals = ['protein' => 0, 'carbs' => 0, 'fat' => 0];
         foreach ($meals as &$meal) {
             $totalCalories += $meal['calories'];
             $meal['calories'] = round($meal['calories'], 1);
+            foreach (array_keys($totals) as $macro) {
+                $totals[$macro] += $meal[$macro];
+                $meal[$macro] = round($meal[$macro], 1);
+            }
         }
         unset($meal);
 
@@ -1981,6 +2014,9 @@ class DietUserWeeklyController extends Controller
             'todate' => $plan->todate,
             'target_calories' => $plan->calories !== null ? round((float) $plan->calories, 1) : null,
             'total_calories' => round($totalCalories, 1),
+            'total_protein' => round($totals['protein'], 1),
+            'total_carbs' => round($totals['carbs'], 1),
+            'total_fat' => round($totals['fat'], 1),
             'meals' => array_values($meals),
         ]);
     }
