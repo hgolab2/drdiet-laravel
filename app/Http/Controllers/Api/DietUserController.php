@@ -1014,6 +1014,7 @@ class DietUserController extends Controller
      *             @OA\Property(property="last_name", type="string"),
      *             @OA\Property(property="age", type="integer", nullable=true),
      *             @OA\Property(property="diet_type", type="string", nullable=true),
+     *             @OA\Property(property="ai_description", type="string", nullable=true, description="توضیح هوش مصنوعی درباره وضعیت کاربر برای کارشناس تغذیه"),
 
     *             @OA\Property(
     *                 property="latest_diet_plan",
@@ -1285,7 +1286,7 @@ class DietUserController extends Controller
             'remainingHours' => $remainingHours,
             'has_exercise_program' => !is_null($programs),
             'programs' => $programs,
-            //'ai_description' => $item->ai_description,
+            'ai_description' => $item->ai_description,
             'loginLink' => 'https://di3t-club.com/login/callback-email?token=' . $item->login_token
         ]);
     }
