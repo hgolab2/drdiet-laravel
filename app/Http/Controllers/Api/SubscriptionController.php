@@ -179,6 +179,10 @@ class SubscriptionController extends Controller
                             $targetCalories = $bmr + $reductionRate;
                             break;
                     }
+                    $calorieData = Calorie::forWeekly($weekly->id, $dietUser->diet_type_id);
+                    if (!$calorieData) {
+                        return response()->json(['message' => 'تنظیمات کالری برای این برنامه تعریف نشده است.'], 422);
+                    }
                     $weekly2 = DietUserWeekly::create([
                         'userId' => $dietUser->id,
                         'fromdate' => $request->start_date,
@@ -188,7 +192,6 @@ class SubscriptionController extends Controller
                         'calories' => $targetCalories,
                     ]);
 
-                    $calorieData = Calorie::where('dietTypeId' , $dietUser->diet_type_id)->first();
                     $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $weekly->id)->where('day' , 1)->get();
                     foreach ($weeklyMeals as $meal)
                     {

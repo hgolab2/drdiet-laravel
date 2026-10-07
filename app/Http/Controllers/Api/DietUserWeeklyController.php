@@ -169,6 +169,10 @@ class DietUserWeeklyController extends Controller
                 break;
         }
 
+        $calorieData = Calorie::forWeekly($request->weeklyId, $dietUser->diet_type_id);
+        if (!$calorieData) {
+            return response()->json(['message' => 'تنظیمات کالری برای این برنامه تعریف نشده است.'], 422);
+        }
 
         // اجرای عملیات در تراکنش
         //DB::transaction(function () use ($request, $targetCalories) {
@@ -182,7 +186,6 @@ class DietUserWeeklyController extends Controller
             ]);
 
 
-            $calorieData = Calorie::where('dietTypeId' , $dietUser->diet_type_id)->first();
             $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $request->weeklyId)->get();
             foreach ($weeklyMeals as $meal)
             {
@@ -369,6 +372,10 @@ class DietUserWeeklyController extends Controller
                     $targetCalories = $bmr + $reductionRate;
                     break;
             }
+            $calorieData = Calorie::forWeekly($weekly->id, $dietUser->diet_type_id);
+            if (!$calorieData) {
+                return response()->json(['message' => 'تنظیمات کالری برای این برنامه تعریف نشده است.'], 422);
+            }
             $weekly2 = DietUserWeekly::create([
                 'userId' => $dietUser->id,
                 'fromdate' => $fromDate,
@@ -378,7 +385,6 @@ class DietUserWeeklyController extends Controller
                 'calories' => $targetCalories,
             ]);
 
-            $calorieData = Calorie::where('dietTypeId' , $dietUser->diet_type_id)->first();
             $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $weekly->id)->get();
             foreach ($weeklyMeals as $meal)
             {
@@ -552,6 +558,10 @@ class DietUserWeeklyController extends Controller
                     break;
             }
 
+            $calorieData = Calorie::forWeekly($week->id, $dietUser->diet_type_id);
+            if (!$calorieData) {
+                return response()->json(['message' => 'تنظیمات کالری برای این برنامه تعریف نشده است.'], 422);
+            }
 
             // اجرای عملیات در تراکنش
 
@@ -565,7 +575,6 @@ class DietUserWeeklyController extends Controller
             ]);
 
 
-            $calorieData = Calorie::where('dietTypeId' , $dietUser->diet_type_id)->first();
             $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $week->id)->get();
             foreach ($weeklyMeals as $meal)
             {
@@ -681,9 +690,6 @@ class DietUserWeeklyController extends Controller
         $fromDate = Carbon::parse($request->fromdate);
         $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
 
-        // حذف آیتم‌های قبلی کاربر
-        DietUserWeeklyItem::where('userWeeklyId', $id)->delete();
-
         // دریافت اطلاعات کاربر رژیم
         $dietUser = User::find($request->userId);
 
@@ -779,6 +785,14 @@ class DietUserWeeklyController extends Controller
                 break;
         }
 
+        $calorieData = Calorie::forWeekly($request->weeklyId, $dietUser->diet_type_id);
+        if (!$calorieData) {
+            return response()->json(['message' => 'تنظیمات کالری برای این برنامه تعریف نشده است.'], 422);
+        }
+
+        // حذف آیتم‌های قبلی کاربر
+        DietUserWeeklyItem::where('userWeeklyId', $id)->delete();
+
         // به‌روزرسانی رژیم کاربر
         $weekly->update([
             'userId' => $request->userId,
@@ -789,7 +803,6 @@ class DietUserWeeklyController extends Controller
         ]);
 
 
-        $calorieData = Calorie::where('dietTypeId' , $dietUser->diet_type_id)->first();
         $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $request->weeklyId)->get();
         foreach ($weeklyMeals as $meal)
         {
@@ -1058,7 +1071,11 @@ class DietUserWeeklyController extends Controller
             | 8- گرفتن همه داده‌ها یکجا (حذف N+1 کامل)
             |--------------------------------------------------------------------------
             */
-            $calorieData = Calorie::where('dietTypeId', $dietUser->diet_type_id)->first();
+            $calorieData = Calorie::forWeekly($newWeekly->id, $dietUser->diet_type_id);
+            if (!$calorieData) {
+                DB::rollBack();
+                return response()->json(['message' => 'تنظیمات کالری برای این برنامه تعریف نشده است.'], 422);
+            }
 
             $weeklyMeals = DietWeeklyMeal::where('diet_weekly_id', $newWeekly->id)->get();
 

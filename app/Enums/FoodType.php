@@ -47,6 +47,22 @@ enum FoodType: int
         };
     }
 
+    /**
+     * نوع رژیم‌هایی (DietType) که ردیف کالری این نوع غذا از آن‌ها خوانده می‌شود، به ترتیب اولویت.
+     * انواعی که معادل ندارند (مثل عادي) آرایه خالی برمی‌گردانند تا از هدف وزنی کاربر استفاده شود.
+     */
+    public function dietTypes(?int $userDietTypeId): array
+    {
+        return match($this) {
+            self::السكري        => [DietType::دیابت],
+            self::مشاكل_القولون => $userDietTypeId === DietType::افزایش_وزن->value
+                ? [DietType::سندرم_روده_تحریک_پذیر_افزایشی, DietType::سندرم_روده_تحریک_پذیر]
+                : [DietType::سندرم_روده_تحریک_پذیر],
+            self::برنامج_٢١_يوم => [DietType::رژیم_۲۱_روزه, DietType::رژیم_مدیترانه‌ای],
+            default             => [],
+        };
+    }
+
     public static function getList(): array
     {
         return array_map(fn($case) => [
