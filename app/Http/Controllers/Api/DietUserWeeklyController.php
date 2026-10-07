@@ -1047,11 +1047,11 @@ class DietUserWeeklyController extends Controller
                     $targetCalories = $bmr - $reduction;
                     break;
 
-                case 2:
+                case 3:
                     $targetCalories = $bmr;
                     break;
 
-                case 3:
+                case 2:
                     $increase = match ($activityLevel) {
                         DailyActivityLevel::سبک => 500,
                         DailyActivityLevel::متوسط => 900,
