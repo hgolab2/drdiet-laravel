@@ -66,7 +66,7 @@ class LocationController extends Controller
     public function states(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'support'])) {
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert', 'support'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $request->validate(['country_id' => 'required|integer|exists:countries,id']);
@@ -99,7 +99,7 @@ class LocationController extends Controller
     public function cities(Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'support'])) {
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert', 'support'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         $request->validate(['state_id' => 'required|integer|exists:states,id']);
