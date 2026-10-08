@@ -141,10 +141,17 @@ class DietLeadController extends Controller
             ], 404);
         }
 
-        $lead->update([
+        $data = [
             'level' => $lead->level + 1,
             'level_date' => now(),
-        ]);
+        ];
+
+        // رسیدن به سطح ۲ یعنی «تم التواصل»
+        if ($data['level'] >= 2 && empty($lead->status)) {
+            $data['status'] = 1;
+        }
+
+        $lead->update($data);
 
         return response()->json([
             'success' => true,
@@ -1218,6 +1225,7 @@ class DietLeadController extends Controller
             'expert_id' => 'nullable',
             'notes' => 'nullable|string',
             'level' => 'nullable|integer',
+            'description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {

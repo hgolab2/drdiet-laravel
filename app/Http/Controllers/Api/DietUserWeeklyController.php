@@ -670,7 +670,7 @@ class DietUserWeeklyController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert', 'support'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -2151,7 +2151,7 @@ class DietUserWeeklyController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'nutrition_expert', 'support'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 

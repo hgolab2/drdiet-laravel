@@ -1312,7 +1312,7 @@ class DietUserController extends Controller
     public function destroy($id)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert', 'support'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -1520,7 +1520,7 @@ class DietUserController extends Controller
     public function toggleStatus($id, Request $request)
     {
         $user = Auth::user();
-        if (!$user->hasAnyRole(['super_admin', 'sales_expert'])) {
+        if (!$user->hasAnyRole(['super_admin', 'sales_expert', 'support'])) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
