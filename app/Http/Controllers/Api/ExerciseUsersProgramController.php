@@ -214,8 +214,8 @@ class ExerciseUsersProgramController extends Controller
                     'exercise_users_program_id' => $program->id,
                     'exercise_program_item_id' => $item->id,
                     'exercise_id' => $item->exercise_id,
-                    'set' => rand(3, 4),
-                    'frequency' => rand(12, 14),
+                    'set' => $item->set ?: rand(3, 4),
+                    'frequency' => $item->frequency ?: rand(12, 14),
                     'user_id' => $request->user_id, // user_id هدف
                 ]);
             }
@@ -256,8 +256,8 @@ class ExerciseUsersProgramController extends Controller
                         'exercise_users_program_id' => $program->id,
                         'exercise_program_item_id' => $item->id,
                         'exercise_id' => $exerciseMuscle->exercise_id,
-                        'set' => rand(3, 4),
-                        'frequency' => rand(12, 14),
+                        'set' => $item->set ?: rand(3, 4),
+                        'frequency' => $item->frequency ?: rand(12, 14),
                         'user_id' => $request->user_id, // user_id هدف
                     ]);
                 }

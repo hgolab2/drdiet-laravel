@@ -102,47 +102,7 @@ class ExerciseProgramController extends Controller
         ]));
 
         if ($request->has('days')) {
-            if($request->is_sick)
-            {
-                foreach ($request->days as $day => $exercises) {
-                    if (is_array($exercises)) {
-                        foreach ($exercises as $exercise_id) {
-                            // فرانت ممکن است آبجکت {"exercise_id": 104} بفرستد نه عدد خالی
-                            if (is_array($exercise_id)) {
-                                $exercise_id = $exercise_id['exercise_id'] ?? null;
-                            }
-                            if (!$exercise_id) {
-                                continue;
-                            }
-                            ExerciseProgramItem::create([
-                                'exercise_program_id' => $program->id,
-                                'exercise_id' => $exercise_id,
-                                'day' => (int)$day
-                            ]);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                foreach ($request->days as $day => $muscles) {
-                    if (is_array($muscles)) {
-                        foreach ($muscles as $muscle_id) {
-                            if (is_array($muscle_id)) {
-                                $muscle_id = $muscle_id['muscle_id'] ?? null;
-                            }
-                            if (!$muscle_id) {
-                                continue;
-                            }
-                            ExerciseProgramItem::create([
-                                'exercise_program_id' => $program->id,
-                                'muscle_id' => $muscle_id,
-                                'day' => (int)$day
-                            ]);
-                        }
-                    }
-                }
-            }
+            $this->createItems($program, $request->days, (bool) $request->is_sick);
         }
 
         return response()->json([
@@ -187,6 +147,8 @@ class ExerciseProgramController extends Controller
                         'exercise_id' => $item->exercise_id,
                         'muscle_id' => $item->muscle_id,
                         'muscle' => $item->muscle?->name_ar,
+                        'set' => $item->set,
+                        'frequency' => $item->frequency,
                     ];
                 }
 
@@ -195,6 +157,8 @@ class ExerciseProgramController extends Controller
                     'exercise_id' => $item->exercise_id,
                     'muscle_id' => $item->muscle_id,
                     'muscle' => $item->muscle?->name_ar,
+                    'set' => $item->set,
+                    'frequency' => $item->frequency,
                     'name_ar' => $ex->name_ar,
                     'name_en' => $ex->name_en,
                     'name_fa' => $ex->name_fa,
@@ -332,50 +296,49 @@ class ExerciseProgramController extends Controller
         $program->items()->delete();
 
         if ($request->has('days')) {
-            if($request->is_sick)
-            {
-                foreach ($request->days as $day => $exercises) {
-                    if (is_array($exercises)) {
-                        foreach ($exercises as $exercise_id) {
-                            // فرانت ممکن است آبجکت {"exercise_id": 104} بفرستد نه عدد خالی
-                            if (is_array($exercise_id)) {
-                                $exercise_id = $exercise_id['exercise_id'] ?? null;
-                            }
-                            if (!$exercise_id) {
-                                continue;
-                            }
-                            ExerciseProgramItem::create([
-                                'exercise_program_id' => $program->id,
-                                'exercise_id' => $exercise_id,
-                                'day' => (int)$day
-                            ]);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                foreach ($request->days as $day => $muscles) {
-                    if (is_array($muscles)) {
-                        foreach ($muscles as $muscle_id) {
-                            if (is_array($muscle_id)) {
-                                $muscle_id = $muscle_id['muscle_id'] ?? null;
-                            }
-                            if (!$muscle_id) {
-                                continue;
-                            }
-                            ExerciseProgramItem::create([
-                                'exercise_program_id' => $program->id,
-                                'muscle_id' => $muscle_id,
-                                'day' => (int)$day
-                            ]);
-                        }
-                    }
-                }
-            }
+            $this->createItems($program, $request->days, (bool) $request->is_sick);
         }
 
         return response()->json(['message' => 'برنامه با موفقیت ویرایش شد.']);
+    }
+
+    /**
+     * ساخت آیتم‌های برنامه از روی days.
+     * هر آیتم می‌تواند عدد خالی (شناسه) یا آبجکت {"exercise_id"|"muscle_id": 104, "set": 3, "frequency": 12} باشد.
+     * ست و تکرار اختیاری‌اند و در صورت خالی بودن هنگام تخصیص به کاربر تصادفی تعیین می‌شوند.
+     */
+    private function createItems(ExerciseProgram $program, $days, bool $isSick): void
+    {
+        if (!is_array($days)) {
+            return;
+        }
+
+        $key = $isSick ? 'exercise_id' : 'muscle_id';
+
+        foreach ($days as $day => $entries) {
+            if (!is_array($entries)) {
+                continue;
+            }
+            foreach ($entries as $entry) {
+                $set = null;
+                $frequency = null;
+                if (is_array($entry)) {
+                    $set = $entry['set'] ?? null;
+                    $frequency = $entry['frequency'] ?? null;
+                    $entry = $entry[$key] ?? null;
+                }
+                if (!$entry) {
+                    continue;
+                }
+                ExerciseProgramItem::create([
+                    'exercise_program_id' => $program->id,
+                    $key => $entry,
+                    'day' => (int) $day,
+                    'set' => is_numeric($set) && $set > 0 ? (int) $set : null,
+                    'frequency' => is_numeric($frequency) && $frequency > 0 ? (int) $frequency : null,
+                ]);
+            }
+        }
     }
 
 
@@ -437,6 +400,8 @@ class ExerciseProgramController extends Controller
                             'exercise_id' => $item->exercise_id,
                             'muscle_id' => $item->muscle_id,
                             'muscle' => $item->muscle?->name_ar,
+                            'set' => $item->set,
+                            'frequency' => $item->frequency,
                         ];
                     }
 
@@ -445,6 +410,8 @@ class ExerciseProgramController extends Controller
                         'exercise_id' => $item->exercise_id,
                         'muscle_id' => $item->muscle_id,
                         'muscle' => $item->muscle?->name_ar,
+                        'set' => $item->set,
+                        'frequency' => $item->frequency,
                         'name_ar' => $ex->name_ar,
                         'name_en' => $ex->name_en,
                         'name_fa' => $ex->name_fa,

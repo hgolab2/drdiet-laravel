@@ -13,7 +13,9 @@ class ExerciseProgramItem extends Model
         'exercise_program_id',
         'exercise_id',
         'muscle_id',
-        'day'
+        'day',
+        'set',
+        'frequency',
     ];
 
     public function program()
