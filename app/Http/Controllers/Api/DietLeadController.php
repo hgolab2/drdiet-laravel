@@ -1277,7 +1277,7 @@ class DietLeadController extends Controller
      *          in="query",
      *          required=true,
      *          description="Statistic Type",
-     *          @OA\Schema(type="string", enum={"count","gender","age","disease","source"})
+     *          @OA\Schema(type="string", enum={"count","gender","age","disease","source","country","level","user_status"})
      *     ),
      *
      *     @OA\Parameter(
@@ -1324,7 +1324,7 @@ class DietLeadController extends Controller
         }
 
         $request->validate([
-            'type' => 'required|in:count,gender,age,disease,source',
+            'type' => 'required|in:count,gender,age,disease,source,country,level,user_status',
             'period' => 'nullable|in:today,yesterday,week,month,year',
             'date_from' => 'nullable|date|required_with:date_to',
             'date_to' => 'nullable|date|required_with:date_from|after_or_equal:date_from',
@@ -1380,7 +1380,39 @@ class DietLeadController extends Controller
             'age' => $this->ageStatistics($query),
             'disease' => $this->diseaseStatistics($query),
             'source' => $this->sourceStatistics($query),
+            'country' => $this->countryStatistics($query),
+            'level' => $this->groupedValueStatistics($query, 'level'),
+            'user_status' => $this->groupedValueStatistics($query, 'user_status'),
         };
+    }
+    // Counts leads per value of an integer column (null counted as 0).
+    private function groupedValueStatistics($query, string $column)
+    {
+        $data = $query
+            ->selectRaw("COALESCE({$column}, 0) as group_value, COUNT(*) as total")
+            ->groupBy('group_value')
+            ->orderBy('group_value')
+            ->get()
+            ->map(fn ($item) => [
+                'name' => (string)$item->group_value,
+                'count' => (int)$item->total,
+            ]);
+
+        return response()->json($data);
+    }
+    private function countryStatistics($query)
+    {
+        $data = $query
+            ->selectRaw("COALESCE(NULLIF(TRIM(country), ''), 'unknown') as country_name, COUNT(*) as total")
+            ->groupBy('country_name')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($item) => [
+                'name' => $item->country_name,
+                'count' => (int)$item->total,
+            ]);
+
+        return response()->json($data);
     }
     private function countStatistics($query)
     {
