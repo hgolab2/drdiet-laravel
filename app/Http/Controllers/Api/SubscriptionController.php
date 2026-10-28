@@ -14,7 +14,7 @@ use App\Models\Calorie;
 use App\Models\DietWeeklyMeal;
 use App\Models\DietMealItem;
 use App\Enums\MealType;
-use App\Enums\DailyActivityLevel;
+use App\Helpers\CalorieCalculator;
 use App\Enums\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -121,63 +121,10 @@ class SubscriptionController extends Controller
                 if($weekly != null)
                 {
                     $dietUser = $user;
-                    $birthDate = $dietUser->birth_date;
-                    if (!$birthDate) {
-                        return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
-                    }
-                    $age = Carbon::parse($birthDate)->age;
-                    $weight = $dietUser->weight;
-                    $height = $dietUser->height;
-                    $gender = $dietUser->gender;
-                    if ($gender === 'male')
-                    {
-                        $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-                    }
-                    elseif($gender === 'female')
-                    {
-                        $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-                    }
-                    else
-                    {
-                        return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
-                    }
-                    $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
-                    if (!$activityLevel) {
-                        return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
-                    }
-                    $rR = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1.2,
-                        DailyActivityLevel::متوسط => 1.55,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1.72,
-                    };
-                    $bmr = $bmr * $rR;
-
-
-                    //switch($dietUser->diet_type_id)
-                    switch($user->diet_type_id)
-                    {
-                        case 1:
-                            $reductionRate = match ($activityLevel) {
-                                DailyActivityLevel::سبک => 1100,
-                                DailyActivityLevel::متوسط => 900,
-                                DailyActivityLevel::شدید,
-                                DailyActivityLevel::بسیار_شدید => 500,
-                            };
-                            $targetCalories = $bmr-$reductionRate;
-                            break;
-                        case 3:
-                            $targetCalories = $bmr;
-                            break;
-                        case 2:
-                            $reductionRate = match ($activityLevel) {
-                                DailyActivityLevel::سبک => 500,
-                                DailyActivityLevel::متوسط => 900,
-                                DailyActivityLevel::شدید,
-                                DailyActivityLevel::بسیار_شدید => 1100,
-                            };
-                            $targetCalories = $bmr + $reductionRate;
-                            break;
+                    try {
+                        $targetCalories = CalorieCalculator::forUser($dietUser);
+                    } catch (\InvalidArgumentException $e) {
+                        return response()->json(['message' => $e->getMessage()], 422);
                     }
                     $calorieData = Calorie::forWeekly($weekly->id, $dietUser->diet_type_id);
                     if (!$calorieData) {

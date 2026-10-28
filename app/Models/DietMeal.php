@@ -8,11 +8,32 @@ class DietMeal extends Model
 {
     protected $table = 'diet_meals';
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_APPROVED,
+        self::STATUS_REJECTED,
+    ];
+
     protected $fillable = [
         'name',
         'imageId',
-        'description'
+        'description',
+        'user_id',
+        'status',
     ];
+
+    protected $casts = [
+        'user_id' => 'integer',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function mealTypes()
     {

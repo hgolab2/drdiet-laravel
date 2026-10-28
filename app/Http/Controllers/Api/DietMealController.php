@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DietItem;
 use App\Models\DietMeal;
 use App\Models\DietMealItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Enums\MealType;
 use App\Enums\FoodCulture;
 use App\Enums\MealCategory;
@@ -21,6 +25,11 @@ use Carbon\Carbon;
 
 class DietMealController extends Controller
 {
+    private const STAFF_ROLES = ['super_admin', 'nutrition_expert', 'support'];
+
+    // حداکثر تعداد وعده‌های در انتظار تایید هر کاربر
+    private const MAX_PENDING_USER_MEALS = 10;
+
     public function __construct()
     {
         $this->middleware('auth:api');
@@ -179,7 +188,28 @@ class DietMealController extends Controller
         }
 
         $pageSize = (int)($request->pagesize ?? 20);
-        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures']);
+        $isStaff = $user->hasAnyRole(self::STAFF_ROLES);
+        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures', 'user']);
+
+        if ($isStaff) {
+            // پیش‌فرض فقط وعده‌های تایید شده؛ status=all همه وعده‌ها
+            $status = $request->input('status', DietMeal::STATUS_APPROVED);
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+            if ($request->boolean('user_created')) {
+                $query->whereNotNull('user_id');
+            }
+        } else {
+            // کاربر عادی: وعده‌های تایید شده + وعده‌های در انتظار تایید خودش
+            $query->where(function ($q) use ($user) {
+                $q->where('status', DietMeal::STATUS_APPROVED)
+                    ->orWhere(function ($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                            ->where('status', DietMeal::STATUS_PENDING);
+                    });
+            });
+        }
 
         if ($request->filled('name')) {
             $query->where('name', 'like', "%{$request->name}%");
@@ -206,48 +236,69 @@ class DietMealController extends Controller
             $query->whereHas('foodCultures', function ($q) use ($cultureIds) {
                 $q->whereIn('food_culture_id', $cultureIds);
             });
+        } elseif (!$isStaff && $user->usesFoodCulture()) {
+            // برنامه عادی: فقط وعده‌های فرهنگ غذایی کاربر؛ سایر برنامه‌ها بین‌المللی هستند
+            $query->whereHas('foodCultures', function ($q) use ($user) {
+                $q->where('food_culture_id', $user->food_culture);
+            });
         }
         $totalCount = $query->count();
         $meals = $query->orderBy('id', 'desc')->paginate($pageSize);
-        $meals = collect($meals->items())->map(function ($meal) {
-            return [
-                'id' => $meal->id,
-                'name' => $meal->name,
-                'description' => $meal->description,
-                'imageUrl' => $meal->image?->url(),
-                'mealTypes' => $meal->mealTypes->map(function ($t) {
-                    return [
-                        'id' => $t->meal_type_id,
-                        'label' => $t->meal_type_id ? MealType::from($t->meal_type_id)->label() : null,
-
-                    ];
-                }),
-                'mealCategories' => $meal->mealCategories->map(function ($t) {
-                    return [
-                        'id' => $t->meal_category_id,
-                        'label' => $t->meal_category_id ? MealCategory::from($t->meal_category_id)->label() : null,
-
-                    ];
-                }),
-                'foodCultures' => $meal->foodCultures->map(function ($f) {
-                    return [
-                        'id' => $f->food_culture_id,
-                        'label' => $f->food_culture_id ? FoodCulture::from($f->food_culture_id)->label() : null,
-                    ];
-                }),
-
-                'items' => $meal->items->map(fn($i) => [
-                    'itemId' => $i->itemId,
-                    'title' => $i->item->name ?? null,
-                    'percent' => $i->percent
-                ])
-            ];
-        });
+        $meals = collect($meals->items())->map(fn($meal) => $this->mealToArray($meal, $user, $isStaff));
 
         return response()->json([
             'result' => $meals,
             'totalCount' => $totalCount,
         ]);
+    }
+
+    private function mealToArray(DietMeal $meal, $user, bool $isStaff = false): array
+    {
+        $output = [
+            'id' => $meal->id,
+            'name' => $meal->name,
+            'description' => $meal->description,
+            'imageUrl' => $meal->image?->url(),
+            'status' => $meal->status,
+            'isMine' => $meal->user_id !== null && $meal->user_id === $user->id,
+            'mealTypes' => $meal->mealTypes->map(function ($t) {
+                return [
+                    'id' => $t->meal_type_id,
+                    'label' => $t->meal_type_id ? MealType::from($t->meal_type_id)->label() : null,
+
+                ];
+            }),
+            'mealCategories' => $meal->mealCategories->map(function ($t) {
+                return [
+                    'id' => $t->meal_category_id,
+                    'label' => $t->meal_category_id ? MealCategory::from($t->meal_category_id)->label() : null,
+
+                ];
+            }),
+            'foodCultures' => $meal->foodCultures->map(function ($f) {
+                return [
+                    'id' => $f->food_culture_id,
+                    'label' => $f->food_culture_id ? FoodCulture::from($f->food_culture_id)->label() : null,
+                ];
+            }),
+
+            'items' => $meal->items->map(fn($i) => [
+                'itemId' => $i->itemId,
+                'title' => $i->item->name ?? null,
+                'percent' => $i->percent
+            ])
+        ];
+
+        if ($isStaff) {
+            $output['creator'] = $meal->user ? [
+                'id' => $meal->user->id,
+                'name' => trim($meal->user->first_name . ' ' . $meal->user->last_name),
+                'phone' => $meal->user->phone,
+            ] : null;
+            $output['created_at'] = $meal->created_at;
+        }
+
+        return $output;
     }
 
     private function aiTextToHtml($text)
@@ -318,6 +369,14 @@ class DietMealController extends Controller
         if (!$meal) {
             return response()->json(['message' => 'یافت نشد.'], 404);
         }
+        // وعده تایید نشده فقط برای سازنده و کارشناسان قابل مشاهده است
+        if (
+            $meal->status !== DietMeal::STATUS_APPROVED
+            && $meal->user_id !== $user->id
+            && !$user->hasAnyRole(self::STAFF_ROLES)
+        ) {
+            return response()->json(['message' => 'یافت نشد.'], 404);
+        }
         //$imageUrlAi = null;
         /*$itemNames = $meal->items
             ->pluck('item.name')
@@ -366,6 +425,8 @@ class DietMealController extends Controller
             'name' => $meal->name,
             'description' => $meal->description,
             'imageUrl' => $meal->image?->url(),
+            'status' => $meal->status,
+            'isMine' => $meal->user_id !== null && $meal->user_id === $user->id,
             //'imageUrlAi' => $imageUrlAi,
             'mealTypes' => $meal->mealTypes->map(function ($t) {
                 return [
@@ -773,6 +834,209 @@ class DietMealController extends Controller
         $meal->delete();
 
         return response()->json(['message' => 'وعده با موفقیت حذف شد.']);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/user-meals/items",
+     *     summary="جستجوی آیتم‌های غذایی برای ساخت وعده توسط کاربر (آیتم‌های فرهنگ غذایی کاربر اول نمایش داده می‌شوند)",
+     *     tags={"UserMeal"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="name", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer", example=1)),
+     *     @OA\Parameter(name="pagesize", in="query", @OA\Schema(type="integer", example=20)),
+     *     @OA\Response(response=200, description="لیست آیتم‌ها همراه با totalCount")
+     * )
+     */
+    public function userItems(Request $request)
+    {
+        $user = Auth::user();
+
+        $pageSize = min(max((int)($request->pagesize ?? 20), 1), 50);
+        $query = DietItem::query();
+
+        if ($request->filled('name')) {
+            $query->where('name', 'like', "%{$request->name}%");
+        }
+
+        $totalCount = $query->count();
+
+        // برنامه عادی: آیتم‌های فرهنگ غذایی کاربر اول؛ سایر برنامه‌ها بین‌المللی هستند
+        if ($user->usesFoodCulture()) {
+            $query->orderByRaw('foodCultureId = ? desc', [$user->food_culture]);
+        }
+        $items = $query->orderBy('name')->paginate($pageSize);
+
+        $items = collect($items->items())->map(fn($item) => [
+            'id' => $item->id,
+            'name' => $item->name,
+            'unit' => $item->unit,
+            'caloriesGram' => $item->caloriesGram,
+            'weightUnit' => $item->weightUnit,
+            'foodCultureId' => $item->foodCultureId,
+        ]);
+
+        return response()->json([
+            'result' => $items,
+            'totalCount' => $totalCount,
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/user-meals",
+     *     summary="لیست وعده‌های ساخته‌شده توسط کاربر جاری همراه با وضعیت تایید",
+     *     tags={"UserMeal"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="لیست وعده‌ها همراه با totalCount")
+     * )
+     */
+    public function userMeals(Request $request)
+    {
+        $user = Auth::user();
+
+        $pageSize = (int)($request->pagesize ?? 20);
+        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures'])
+            ->where('user_id', $user->id);
+
+        $totalCount = $query->count();
+        $meals = $query->orderBy('id', 'desc')->paginate($pageSize);
+
+        return response()->json([
+            'result' => collect($meals->items())->map(fn($meal) => $this->mealToArray($meal, $user)),
+            'totalCount' => $totalCount,
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/user-meals",
+     *     summary="ساخت وعده توسط کاربر؛ وعده با فرهنگ غذایی کاربر و وضعیت در انتظار تایید ذخیره می‌شود",
+     *     tags={"UserMeal"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name", "mealTypes", "items"},
+     *             @OA\Property(property="name", type="string", example="فول مدمس"),
+     *             @OA\Property(property="mealTypes", type="array", @OA\Items(type="integer", example=1)),
+     *             @OA\Property(
+     *                 property="items",
+     *                 type="array",
+     *                 description="مجموع درصدها باید ۱۰۰ باشد",
+     *                 @OA\Items(
+     *                     @OA\Property(property="itemId", type="integer", example=5),
+     *                     @OA\Property(property="percent", type="integer", example=50)
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="وعده ایجاد شد و در انتظار تایید است"),
+     *     @OA\Response(response=422, description="خطای اعتبارسنجی")
+     * )
+     */
+    public function userStore(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'mealTypes' => 'required|array|min:1',
+            'mealTypes.*' => ['required', 'integer', Rule::in(array_column(MealType::cases(), 'value'))],
+            'items' => 'required|array|min:1|max:20',
+            'items.*.itemId' => 'required|integer|distinct|exists:diet_item,id',
+            'items.*.percent' => 'required|integer|min:1|max:100',
+        ]);
+
+        if (!$user->food_culture) {
+            throw ValidationException::withMessages([
+                'food_culture' => 'يرجى تحديد ثقافتك الغذائية في الملف الشخصي أولاً.',
+            ]);
+        }
+
+        if (array_sum(array_column($request->items, 'percent')) !== 100) {
+            throw ValidationException::withMessages([
+                'items' => 'يجب أن يكون مجموع النسب 100٪.',
+            ]);
+        }
+
+        $pendingCount = DietMeal::where('user_id', $user->id)
+            ->where('status', DietMeal::STATUS_PENDING)
+            ->count();
+        if ($pendingCount >= self::MAX_PENDING_USER_MEALS) {
+            throw ValidationException::withMessages([
+                'name' => 'لديك عدد كبير من الوجبات بانتظار المراجعة، يرجى الانتظار حتى تتم مراجعتها.',
+            ]);
+        }
+
+        $meal = DB::transaction(function () use ($request, $user) {
+            $meal = DietMeal::create([
+                'name' => $request->name,
+                'user_id' => $user->id,
+                'status' => DietMeal::STATUS_PENDING,
+            ]);
+
+            foreach (array_unique($request->mealTypes) as $typeId) {
+                DietMealType::create([
+                    'meal_id' => $meal->id,
+                    'meal_type_id' => $typeId,
+                ]);
+            }
+
+            DietMealCulture::create([
+                'meal_id' => $meal->id,
+                'food_culture_id' => $user->food_culture,
+            ]);
+
+            foreach ($request->items as $item) {
+                DietMealItem::create([
+                    'mealId' => $meal->id,
+                    'itemId' => $item['itemId'],
+                    'percent' => $item['percent'],
+                ]);
+            }
+
+            return $meal;
+        });
+
+        return response()->json([
+            'message' => 'تم إنشاء الوجبة وستظهر للجميع بعد موافقة الخبير.',
+            'id' => $meal->id,
+        ], 201);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/diet-meals/{id}/status",
+     *     summary="تایید یا رد وعده ساخته‌شده توسط کاربر",
+     *     tags={"DietMeal"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"pending", "approved", "rejected"})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="وضعیت وعده تغییر کرد")
+     * )
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(self::STAFF_ROLES)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'status' => ['required', Rule::in(DietMeal::STATUSES)],
+        ]);
+
+        $meal = DietMeal::findOrFail($id);
+        $meal->update(['status' => $request->status]);
+
+        return response()->json(['message' => 'وضعیت وعده تغییر کرد.']);
     }
 
     /**

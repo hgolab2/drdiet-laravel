@@ -32,6 +32,7 @@ class DietWeeklyController extends Controller
      *         @OA\JsonContent(
      *             required={"name", "foodCultureIds", "typeIds", "meals"},
      *             @OA\Property(property="name", type="string", example="برنامه هفته اول"),
+     *             @OA\Property(property="days_count", type="integer", example=7, description="تعداد روزهای برنامه (۱ تا ۳۱، پیش‌فرض ۷)"),
      *             @OA\Property(property="food_type_id", type="integer", example=1),
      *             @OA\Property(
      *                 property="foodCultureIds",
@@ -76,12 +77,14 @@ class DietWeeklyController extends Controller
             'meals' => 'required|array',
             'meals.*.mealId' => 'required|integer',
             'meals.*.mealTypeId' => 'required|integer',
-            'meals.*.day' => 'required|integer|min:1|max:7',
+            'days_count' => 'nullable|integer|min:1|max:' . DietWeekly::MAX_DAYS,
+            'meals.*.day' => 'required|integer|min:1|max:' . max(1, (int) ($request->days_count ?? DietWeekly::DEFAULT_DAYS)),
         ]);
 
         $weekly = DietWeekly::create([
             'name' => $request->name,
             'food_type_id' => $request->food_type_id,
+            'days_count' => $request->days_count ?? DietWeekly::DEFAULT_DAYS,
         ]);
 
         foreach ($request->foodCultureIds as $cultureId) {
@@ -160,6 +163,7 @@ class DietWeeklyController extends Controller
         return response()->json([
             'id' => $weakly->id,
             'name' => $weakly->name,
+            'days_count' => $weakly->cycleDays(),
             'food_type_id' => $weakly->food_type_id,
             'food_type' => $weakly->food_type_id ? FoodType::from($weakly->food_type_id)->label() : null,
 
@@ -204,6 +208,7 @@ class DietWeeklyController extends Controller
      *         @OA\JsonContent(
      *             required={"name", "foodCultureIds", "typeIds", "meals"},
      *             @OA\Property(property="name", type="string", example="برنامه هفته دوم"),
+     *             @OA\Property(property="days_count", type="integer", example=13, description="تعداد روزهای برنامه (۱ تا ۳۱)"),
      *             @OA\Property(property="food_type_id", type="integer", example=2),
      *             @OA\Property(
      *                 property="foodCultureIds",
@@ -257,12 +262,14 @@ class DietWeeklyController extends Controller
             'meals' => 'array',
             'meals.*.mealId' => 'required|integer',
             'meals.*.mealTypeId' => 'required|integer',
-            'meals.*.day' => 'required|integer|min:1|max:7',
+            'days_count' => 'nullable|integer|min:1|max:' . DietWeekly::MAX_DAYS,
+            'meals.*.day' => 'required|integer|min:1|max:' . max(1, (int) ($request->days_count ?? $weekly->cycleDays())),
         ]);
 
         $weekly->update([
             'name' => $request->name,
             'food_type_id' => $request->food_type_id,
+            'days_count' => $request->days_count ?? $weekly->cycleDays(),
         ]);
 
         DietWeeklyCulture::where('diet_weekly_id', $weekly->id)->delete();
@@ -442,6 +449,7 @@ class DietWeeklyController extends Controller
             return [
                 'id' => $weakly->id,
                 'name' => $weakly->name,
+                'days_count' => $weakly->cycleDays(),
                 'food_type_id' => $weakly->food_type_id,
                 'food_type' => $weakly->food_type_id ? FoodType::from($weakly->food_type_id)->label() : null,
 
@@ -520,7 +528,7 @@ class DietWeeklyController extends Controller
      *         @OA\JsonContent(
      *             required={"weeklyId", "day"},
      *             @OA\Property(property="weeklyId", type="integer", example=1),
-     *             @OA\Property(property="day", type="integer", example=1, description="روز هفته (1 تا 7)")
+     *             @OA\Property(property="day", type="integer", example=1, description="روز برنامه (1 تا تعداد روزهای برنامه)")
      *         )
      *     ),
      *     @OA\Response(
@@ -540,7 +548,7 @@ class DietWeeklyController extends Controller
     {
         $request->validate([
             'weeklyId' => 'required|integer',
-            'day' => 'required|integer|min:1|max:7',
+            'day' => 'required|integer|min:1|max:' . DietWeekly::MAX_DAYS,
         ]);
 
         $user = Auth::user();

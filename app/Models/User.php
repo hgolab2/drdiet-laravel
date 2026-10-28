@@ -53,13 +53,54 @@ class User extends Authenticatable
         'expire_at',
         'max_lead',
         'current_weight',
-        'weight_updatedate'
+        'weight_updatedate',
+        'pregnancy_week_updated_at'
         /*,
         'ai_description'*/
     ];
     protected $hidden = [
         'password',
     ];
+
+    // حداکثر طول بارداری به هفته؛ بعد از آن کاربر باردار حساب نمی‌شود
+    const MAX_PREGNANCY_WEEK = 42;
+
+    protected static function booted(): void
+    {
+        // با هر تغییر هفته بارداری، تاریخ ثبت آن ذخیره می‌شود
+        static::saving(function (User $user) {
+            if ($user->isDirty('pregnancy_week')) {
+                $user->pregnancy_week_updated_at = $user->pregnancy_week ? now() : null;
+            }
+        });
+    }
+
+    /**
+     * هفته فعلی بارداری: هفته ثبت‌شده + هفته‌های سپری‌شده از زمان ثبت.
+     * صفر یعنی باردار نیست (یا بارداری به پایان رسیده).
+     */
+    public function currentPregnancyWeek(): int
+    {
+        $week = (int) $this->pregnancy_week;
+        if ($week <= 0 || $this->gender !== 'female') {
+            return 0;
+        }
+
+        if ($this->pregnancy_week_updated_at) {
+            $week += intdiv((int) \Carbon\Carbon::parse($this->pregnancy_week_updated_at)->diffInDays(now()), 7);
+        }
+
+        return $week > self::MAX_PREGNANCY_WEEK ? 0 : $week;
+    }
+
+    /**
+     * فقط برنامه عادی بر اساس فرهنگ غذایی کاربر است؛
+     * برنامه‌های پرپروتئین، نباتی و بیماری‌ها بین‌المللی هستند.
+     */
+    public function usesFoodCulture(): bool
+    {
+        return (int) $this->food_type_id === \App\Enums\FoodType::عادي->value && (bool) $this->food_culture;
+    }
     public function generateOtp()
     {
         $this->otp = rand(100000, 999999);

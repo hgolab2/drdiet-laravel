@@ -16,7 +16,7 @@ use App\Models\Calorie;
 use App\Models\DietMealItem;
 use App\Models\Subscription;
 use App\Models\DietWeekly;
-use App\Enums\DailyActivityLevel;
+use App\Helpers\CalorieCalculator;
 use App\Enums\MealType;
 use App\Enums\FoodType;
 use App\Enums\DietType;
@@ -66,6 +66,7 @@ class DietUserWeeklyController extends Controller
      *             @OA\Property(property="fromdate", type="string", format="date", example="2025-07-01"),
      *             @OA\Property(property="weeklyId", type="integer", example=2),
      *             @OA\Property(property="weight", type="integer", example=85),
+     *             @OA\Property(property="days", type="integer", example=7, description="مدت نمایش برنامه به روز (پیش‌فرض ۷)"),
      *         )
      *     ),
      *     @OA\Response(
@@ -90,83 +91,30 @@ class DietUserWeeklyController extends Controller
             'fromdate' => 'required|date',
             'weeklyId' => 'required|integer',
             'weight' => 'nullable|numeric',
+            'days' => 'nullable|integer|min:1|max:90',
         ]);
         $fromDate = Carbon::parse($request->fromdate);
-        $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
+        // پیش‌فرض مدت نمایش، تعداد روزهای خود برنامه است
+        $days = (int) ($request->days ?? DietWeekly::find($request->weeklyId)?->cycleDays() ?? DietWeekly::DEFAULT_DAYS);
+        $todate = $fromDate->copy()->addDays($days)->format('Y-m-d');
 
         $dietUser = User::find($request->userId);
         if (!$dietUser) {
             return response()->json(['message' => 'کاربر یافت نشد.'], 404);
         }
 
-        $birthDate = $dietUser->birth_date;
-        if (!$birthDate) {
-            return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
+        // اگر وزن ارسال نشد، وزن فعلی کاربر استفاده می‌شود
+        try {
+            $targetCalories = CalorieCalculator::forUser($dietUser, $request->weight);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $age = Carbon::parse($birthDate)->age;
-        // اگر وزن ارسال شد
-        if ($request->filled('weight'))
-        {
-            $weight = $request->weight;
-            // بروزرسانی وزن کاربر
-            $dietUser->current_weight = $weight;
+        // بروزرسانی وزن کاربر
+        if ($request->filled('weight')) {
+            $dietUser->current_weight = $request->weight;
             $dietUser->weight_updatedate = now();
             $dietUser->save();
-        }
-        else
-        {
-            // اگر وزن ارسال نشد
-            $weight = $dietUser->current_weight;
-        }
-        $height = $dietUser->height;
-        $gender = $dietUser->gender;
-
-        if ($gender === 'male') {
-            $bmr = (10 * $weight) + (6.25 * $height) - (5 * $age) + 5;
-        } elseif ($gender === 'female') {
-            $bmr = (10 * $weight) + (6.25 * $height) - (5 * $age) - 161;
-        } else {
-            return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
-        }
-
-
-        $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
-        if (!$activityLevel) {
-            return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
-        }
-        $rR = match ($activityLevel) {
-            DailyActivityLevel::سبک => 1.2,
-            DailyActivityLevel::متوسط => 1.55,
-            DailyActivityLevel::شدید,
-            DailyActivityLevel::بسیار_شدید => 1.72,
-        };
-        $bmr = $bmr * $rR;
-
-        $targetCalories = 0;
-        switch($dietUser->diet_type_id)
-        {
-            case 1:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 1100,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 500,
-                };
-                $targetCalories = $bmr-$reductionRate;
-                break;
-            case 3:
-                $targetCalories = $bmr;
-                break;
-            case 2:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 500,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 1100,
-                };
-                $targetCalories = $bmr+$reductionRate;
-                break;
         }
 
         $calorieData = Calorie::forWeekly($request->weeklyId, $dietUser->diet_type_id);
@@ -316,61 +264,11 @@ class DietUserWeeklyController extends Controller
         {
             $dietUser = $user;
             $fromDate = Carbon::today();;
-            $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
-            $birthDate = $dietUser->birth_date;
-            if (!$birthDate) {
-                return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
-            }
-            $age = Carbon::parse($birthDate)->age;
-            $height = $dietUser->height;
-            $gender = $dietUser->gender;
-            if ($gender === 'male')
-            {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-            }
-            elseif($gender === 'female')
-            {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-            }
-            else
-            {
-                return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
-            }
-            $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
-            if (!$activityLevel) {
-                return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
-            }
-            $rR = match ($activityLevel) {
-                DailyActivityLevel::سبک => 1.2,
-                DailyActivityLevel::متوسط => 1.55,
-                DailyActivityLevel::شدید,
-                DailyActivityLevel::بسیار_شدید => 1.72,
-            };
-            $bmr = $bmr * $rR;
-            //switch($dietUser->diet_type_id)
-            switch($user->diet_type_id)
-            {
-                case 1:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1100,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 500,
-                    };
-                    $targetCalories = $bmr-$reductionRate;
-                    break;
-                case 3:
-                    $targetCalories = $bmr;
-                    break;
-                case 2:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 500,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1100,
-                    };
-                    $targetCalories = $bmr + $reductionRate;
-                    break;
+            $todate = $fromDate->copy()->addDays($weekly->cycleDays())->format('Y-m-d');
+            try {
+                $targetCalories = CalorieCalculator::forUser($dietUser, $weight);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
             }
             $calorieData = Calorie::forWeekly($weekly->id, $dietUser->diet_type_id);
             if (!$calorieData) {
@@ -496,66 +394,15 @@ class DietUserWeeklyController extends Controller
         if($week != null)
         {
             $fromDate = Carbon::today();
-            $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
+            $todate = $fromDate->copy()->addDays($week->cycleDays())->format('Y-m-d');
 
 
             $dietUser = $user;
 
-            $birthDate = $dietUser->birth_date;
-            if (!$birthDate) {
-                return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
-            }
-
-            $age = Carbon::parse($birthDate)->age;
-            $weight = $request->weight;
-            $height = $dietUser->height;
-            $gender = $dietUser->gender;
-
-            if ($gender === 'male') {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-            } elseif ($gender === 'female') {
-                $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-            } else {
-                return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
-            }
-
-
-            $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
-            if (!$activityLevel) {
-                return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
-            }
-            $rR = match ($activityLevel) {
-                DailyActivityLevel::سبک => 1.2,
-                DailyActivityLevel::متوسط => 1.55,
-                DailyActivityLevel::شدید,
-                DailyActivityLevel::بسیار_شدید => 1.72,
-            };
-            $bmr = $bmr * $rR;
-
-            $targetCalories = 0;
-            switch($dietUser->diet_type_id)
-            {
-                case 1:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1100,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 500,
-                    };
-                    $targetCalories = $bmr-$reductionRate;
-                    break;
-                case 3:
-                    $targetCalories = $bmr;
-                    break;
-                case 2:
-                    $reductionRate = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 500,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1100,
-                    };
-                    $targetCalories = $bmr+$reductionRate;
-                    break;
+            try {
+                $targetCalories = CalorieCalculator::forUser($dietUser, $request->weight);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
             }
 
             $calorieData = Calorie::forWeekly($week->id, $dietUser->diet_type_id);
@@ -645,6 +492,7 @@ class DietUserWeeklyController extends Controller
      *             @OA\Property(property="fromdate", type="string", format="date", example="2025-07-01"),
      *             @OA\Property(property="weeklyId", type="integer", example=2),
      *             @OA\Property(property="weight", type="integer", example=85),
+     *             @OA\Property(property="days", type="integer", example=7, description="مدت نمایش برنامه به روز (در صورت ارسال نشدن، مدت فعلی حفظ می‌شود)"),
      *         )
      *     ),
      *     @OA\Response(
@@ -685,10 +533,21 @@ class DietUserWeeklyController extends Controller
             'fromdate' => 'required|date',
             'weeklyId' => 'required|integer',
             'weight' => 'nullable|numeric',
+            'days' => 'nullable|integer|min:1|max:90',
         ]);
 
+        // اگر مدت ارسال نشد، مدت فعلی برنامه حفظ می‌شود
+        $days = $request->filled('days')
+            ? (int) $request->days
+            : (($weekly->fromdate && $weekly->todate)
+                ? (int) Carbon::parse($weekly->fromdate)->startOfDay()->diffInDays(Carbon::parse($weekly->todate)->startOfDay())
+                : 7);
+        if ($days < 1) {
+            $days = 7;
+        }
+
         $fromDate = Carbon::parse($request->fromdate);
-        $todate = $fromDate->copy()->addDays(7)->format('Y-m-d');
+        $todate = $fromDate->copy()->addDays($days)->format('Y-m-d');
 
         // دریافت اطلاعات کاربر رژیم
         $dietUser = User::find($request->userId);
@@ -697,92 +556,18 @@ class DietUserWeeklyController extends Controller
             return response()->json(['message' => 'کاربر یافت نشد.'], 404);
         }
 
-        $birthDate = $dietUser->birth_date;
-
-        if (!$birthDate) {
-            return response()->json(['message' => 'تاریخ تولد موجود نیست.'], 422);
+        // اگر وزن ارسال نشد، وزن فعلی کاربر استفاده می‌شود
+        try {
+            $targetCalories = CalorieCalculator::forUser($dietUser, $request->weight);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $age = Carbon::parse($birthDate)->age;
-
-        // اگر وزن ارسال شد
+        // بروزرسانی وزن کاربر
         if ($request->filled('weight')) {
-
-            $weight = $request->weight;
-
-            // بروزرسانی وزن کاربر
-            $dietUser->current_weight = $weight;
+            $dietUser->current_weight = $request->weight;
             $dietUser->weight_updatedate = now();
             $dietUser->save();
-
-        } else {
-
-            // اگر وزن ارسال نشد
-            $weight = $dietUser->current_weight;
-        }
-
-        $height = $dietUser->height;
-        $gender = $dietUser->gender;
-
-        if ($gender === 'male') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age + 5;
-        } elseif ($gender === 'female') {
-            $bmr = 10 * $weight + 6.25 * $height - 5 * $age - 161;
-        } else {
-            return response()->json(['message' => 'جنسیت نامعتبر است.'], 422);
-        }
-
-        // سطح فعالیت و کاهش کالری
-        $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
-        if (!$activityLevel) {
-            return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
-        }
-        $rR = match ($activityLevel) {
-            DailyActivityLevel::سبک => 1.2,
-            DailyActivityLevel::متوسط => 1.55,
-            DailyActivityLevel::شدید,
-            DailyActivityLevel::بسیار_شدید => 1.72,
-        };
-        $bmr = $bmr * $rR;
-        /*$bmi = $weight / (($weight/100) * ($weight/100));
-        if($bmi < 18)
-        {
-            $weight_goal_id = 2;
-        }
-        elseif($bmi > 24)
-        {
-            $weight_goal_id = 1;
-        }
-        else
-        {
-            $weight_goal_id = 3;
-        }*/
-
-
-        //switch($weight_goal_id)
-        switch($dietUser->diet_type_id)
-        {
-            case 1:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 1100,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 500,
-                };
-                $targetCalories = $bmr-$reductionRate;
-                break;
-            case 3:
-                $targetCalories = $bmr;
-                break;
-            case 2:
-                $reductionRate = match ($activityLevel) {
-                    DailyActivityLevel::سبک => 500,
-                    DailyActivityLevel::متوسط => 900,
-                    DailyActivityLevel::شدید,
-                    DailyActivityLevel::بسیار_شدید => 1100,
-                };
-                $targetCalories = $bmr+$reductionRate;
-                break;
         }
 
         $calorieData = Calorie::forWeekly($request->weeklyId, $dietUser->diet_type_id);
@@ -1009,57 +794,16 @@ class DietUserWeeklyController extends Controller
             */
             $dietUser = User::find($user->id);
 
-            if (!$dietUser || !$dietUser->birth_date) {
+            if (!$dietUser) {
+                DB::rollBack();
                 return response()->json(['message' => 'اطلاعات کاربر ناقص است.'], 422);
             }
 
-            $age = Carbon::parse($dietUser->birth_date)->age;
-            $weight = $dietUser->weight;
-            $height = $dietUser->height;
-            $gender = $dietUser->gender;
-
-            $bmr = $gender === 'male'
-                ? (10 * $weight + 6.25 * $height - 5 * $age + 5)
-                : (10 * $weight + 6.25 * $height - 5 * $age - 161);
-
-            $activityLevel = DailyActivityLevel::tryFrom($dietUser->daily_activity_level);
-            if (!$activityLevel) {
-                return response()->json(['message' => 'سطح فعالیت نامعتبر است.'], 422);
-            }
-
-            $activityMultiplier = match ($activityLevel) {
-                DailyActivityLevel::سبک => 1.2,
-                DailyActivityLevel::متوسط => 1.55,
-                DailyActivityLevel::شدید,
-                DailyActivityLevel::بسیار_شدید => 1.72,
-            };
-
-            $bmr *= $activityMultiplier;
-
-            switch ($dietUser->diet_type_id) {
-                case 1:
-                    $reduction = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 1100,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 500,
-                    };
-                    $targetCalories = $bmr - $reduction;
-                    break;
-
-                case 3:
-                    $targetCalories = $bmr;
-                    break;
-
-                case 2:
-                    $increase = match ($activityLevel) {
-                        DailyActivityLevel::سبک => 500,
-                        DailyActivityLevel::متوسط => 900,
-                        DailyActivityLevel::شدید,
-                        DailyActivityLevel::بسیار_شدید => 1100,
-                    };
-                    $targetCalories = $bmr + $increase;
-                    break;
+            try {
+                $targetCalories = CalorieCalculator::forUser($dietUser);
+            } catch (\InvalidArgumentException $e) {
+                DB::rollBack();
+                return response()->json(['message' => $e->getMessage()], 422);
             }
 
             $dietUserWeekly->update([
@@ -1480,6 +1224,7 @@ class DietUserWeeklyController extends Controller
             'food_type' => $weekly->food_type_id ? FoodType::from($weekly->food_type_id)->label() : null,
             'weeklyId' => $weekly->weeklyId,
             'weekly' => $weekly->weekly?->name,
+            'days_count' => $weekly->weekly?->cycleDays() ?? DietWeekly::DEFAULT_DAYS,
             'calories' => $weekly->calories,
             'created_at' => $weekly->created_at,
             'updated_at' => $weekly->updated_at,
@@ -1594,6 +1339,7 @@ class DietUserWeeklyController extends Controller
                 'todate' => $latestPlan->todate,
                 'weeklyId' => $latestPlan->weeklyId,
                 'weekly' => $latestPlan->weekly?->name,
+                'days_count' => $latestPlan->weekly?->cycleDays() ?? DietWeekly::DEFAULT_DAYS,
                 'calories' => $latestPlan->calories,
                 'weight' => $latestPlan->weight,
                 'current_weight' => $latestPlan->current_weight,
@@ -1737,6 +1483,7 @@ class DietUserWeeklyController extends Controller
                 'todate' => $latestPlan->todate,
                 'weeklyId' => $latestPlan->weeklyId,
                 'weekly' => $latestPlan->weekly?->name,
+                'days_count' => $latestPlan->weekly?->cycleDays() ?? DietWeekly::DEFAULT_DAYS,
                 'calories' => $latestPlan->calories,
                 'weight' => $latestPlan->weight,
 
@@ -1913,7 +1660,7 @@ class DietUserWeeklyController extends Controller
             $userId = (int) $request->user_id;
         }
 
-        $plan = DietUserWeekly::with(['items.dietWeeklyMeal', 'items.mealItem'])
+        $plan = DietUserWeekly::with(['weekly', 'items.dietWeeklyMeal', 'items.mealItem'])
             ->where('userId', $userId)
             ->orderByDesc('id')
             ->first();
@@ -1930,13 +1677,15 @@ class DietUserWeeklyController extends Controller
             return response()->json(['message' => 'برنامه غذایی هنوز شروع نشده است.', 'fromdate' => $plan->fromdate], 422);
         }
 
-        // روزهای برنامه ۱ تا ۷ هستند؛ todate روز بعد از پایان برنامه است
+        // todate روز بعد از پایان برنامه است؛ مدت برنامه توسط کارشناس قابل تنظیم است
         $toDate = $plan->todate ? Carbon::parse($plan->todate)->startOfDay() : $fromDate->copy()->addDays(7);
-        if ($diff >= 7 || $date->gte($toDate)) {
+        if ($date->gte($toDate)) {
             return response()->json(['message' => 'برنامه غذایی کاربر به پایان رسیده است.', 'todate' => $plan->todate], 404);
         }
 
-        $planDay = $diff + 1;
+        // روزهای برنامه ۱ تا days_count هستند و اگر مدت نمایش بیشتر باشد تکرار می‌شوند
+        $cycleDays = $plan->weekly?->cycleDays() ?? DietWeekly::DEFAULT_DAYS;
+        $planDay = ($diff % $cycleDays) + 1;
 
         // فقط وقتی خود کاربر برنامه امروزش را چک می‌کند پایبندی ثبت می‌شود
         if ($userId == $authUser->id && !$request->filled('date')) {
@@ -2057,7 +1806,7 @@ class DietUserWeeklyController extends Controller
      *                 @OA\Property(property="user_weekly_id", type="integer"),
      *                 @OA\Property(property="fromdate", type="string", format="date"),
      *                 @OA\Property(property="todate", type="string", format="date"),
-     *                 @OA\Property(property="elapsed_days", type="integer", description="روزهای سپری‌شده از برنامه تا امروز (حداکثر ۷)"),
+     *                 @OA\Property(property="elapsed_days", type="integer", description="روزهای سپری‌شده از برنامه تا امروز (حداکثر به اندازه مدت برنامه)"),
      *                 @OA\Property(property="checked_days", type="integer", description="روزهای پایبندی در این برنامه"),
      *                 @OA\Property(property="percent", type="number", description="درصد پایبندی در این برنامه")
      *             )
