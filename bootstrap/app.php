@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -27,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     DB::table('errorlog')->insert([
                         'message'       => $e->getMessage(),
                         'stack_trace'   => $e->getTraceAsString(),
-                        'level'         => method_exists($e, 'getStatusCode') && $e->getStatusCode() < 500 ? 'warning' : 'error',
+                        'level'         => ($e instanceof ModelNotFoundException) || (method_exists($e, 'getStatusCode') && $e->getStatusCode() < 500) ? 'warning' : 'error',
                         'url'           => $request->fullUrl() ?? '',
                         'route_name'    => $request->route()?->getName(),
                         'method'        => $request->method() ?? 'GET',
@@ -46,6 +47,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             try {
+                // رکورد پیدا نشده (404) خطای سیستمی نیست؛ در errorlog می‌ماند ولی هشدار بله نمی‌رود
+                if ($e instanceof ModelNotFoundException) {
+                    return null;
+                }
                 $level = method_exists($e, 'getStatusCode') && $e->getStatusCode() < 500 ? 'warning' : 'error';
                 $userid = Auth::check() ? Auth::id() : "";
                 $line = $e->getLine() ?? 0;
