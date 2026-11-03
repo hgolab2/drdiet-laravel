@@ -1385,6 +1385,59 @@ class DietLeadController extends Controller
             'user_status' => $this->groupedValueStatistics($query, 'user_status'),
         };
     }
+    /**
+     * @OA\Get(
+     *   path="/api/diet-leads-sales-chart",
+     *   summary="Daily leads (entries) vs sales (subscribed leads, user_status=1)",
+     *   tags={"DietLead"},
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Parameter(name="days", in="query", required=false, @OA\Schema(type="integer", enum={7,30,60,90}, default=30)),
+     *   @OA\Response(response=200, description="Per-day series, oldest first")
+     * )
+     */
+    public function salesChart(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['super_admin', 'marketing', 'marketing_manager'])) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate(['days' => 'nullable|in:7,30,60,90']);
+        $days = (int)($request->days ?: 30);
+        $tz = 'Asia/Tehran';
+
+        $end = Carbon::now($tz)->startOfDay();
+        $start = $end->copy()->subDays($days - 1);
+
+        $series = [];
+        for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+            $series[$d->format('Y-m-d')] = ['date' => $d->format('Y-m-d'), 'entries' => 0, 'sales' => 0];
+        }
+
+        DietLead::query()
+            ->where('created_at', '>=', $start->copy()->utc())
+            ->get(['created_at', 'user_status'])
+            ->each(function ($lead) use (&$series, $tz) {
+                $key = $lead->created_at->copy()->setTimezone($tz)->format('Y-m-d');
+                if (!isset($series[$key])) {
+                    return;
+                }
+                $series[$key]['entries']++;
+                if ((int)$lead->user_status === 1) {
+                    $series[$key]['sales']++;
+                }
+            });
+
+        $series = array_values($series);
+
+        return response()->json([
+            'days' => $days,
+            'total_entries' => array_sum(array_column($series, 'entries')),
+            'total_sales' => array_sum(array_column($series, 'sales')),
+            'data' => $series,
+        ]);
+    }
+
     // Counts leads per value of an integer column (null counted as 0).
     private function groupedValueStatistics($query, string $column)
     {
