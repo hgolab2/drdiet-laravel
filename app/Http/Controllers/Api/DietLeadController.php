@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DietLead;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -1388,7 +1389,7 @@ class DietLeadController extends Controller
     /**
      * @OA\Get(
      *   path="/api/diet-leads-sales-chart",
-     *   summary="Daily leads (entries) vs sales (subscribed leads, user_status=1)",
+     *   summary="Daily leads (entries) vs sales (records of the subscriptions table)",
      *   tags={"DietLead"},
      *   security={{"bearerAuth":{}}},
      *   @OA\Parameter(name="days", in="query", required=false, @OA\Schema(type="integer", enum={7,30,60,90}, default=30)),
@@ -1414,16 +1415,25 @@ class DietLeadController extends Controller
             $series[$d->format('Y-m-d')] = ['date' => $d->format('Y-m-d'), 'entries' => 0, 'sales' => 0];
         }
 
+        $startUtc = $start->copy()->utc();
+
         DietLead::query()
-            ->where('created_at', '>=', $start->copy()->utc())
-            ->get(['created_at', 'user_status'])
+            ->where('created_at', '>=', $startUtc)
+            ->get(['created_at'])
             ->each(function ($lead) use (&$series, $tz) {
                 $key = $lead->created_at->copy()->setTimezone($tz)->format('Y-m-d');
-                if (!isset($series[$key])) {
-                    return;
+                if (isset($series[$key])) {
+                    $series[$key]['entries']++;
                 }
-                $series[$key]['entries']++;
-                if ((int)$lead->user_status === 1) {
+            });
+
+        // Sales = every record of the subscriptions table, by its created_at day.
+        Subscription::query()
+            ->where('created_at', '>=', $startUtc)
+            ->get(['created_at'])
+            ->each(function ($sub) use (&$series, $tz) {
+                $key = $sub->created_at->copy()->setTimezone($tz)->format('Y-m-d');
+                if (isset($series[$key])) {
                     $series[$key]['sales']++;
                 }
             });
