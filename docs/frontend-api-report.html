@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>سرویس‌های جدید API</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1f2328; --muted: #5f6670;
+    --border: #e3e3df; --accent: #0b6e4f; --accent-soft: #e4f2ec;
+    --warn: #8a5a00; --warn-soft: #fff4dc; --danger: #a4262c; --danger-soft: #fde8e8;
+    --code-bg: #f1f1ee; --get: #1f6feb; --post: #0b6e4f; --put: #8a5a00; --del: #a4262c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151719; --surface: #1d2023; --text: #e6e6e3; --muted: #a0a6ad;
+      --border: #30343a; --accent: #4cc39a; --accent-soft: #173229;
+      --warn: #e8b64c; --warn-soft: #33290f; --danger: #f07a7f; --danger-soft: #3a1c1e;
+      --code-bg: #25292d; --get: #6ea8ff; --post: #4cc39a; --put: #e8b64c; --del: #f07a7f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151719; --surface: #1d2023; --text: #e6e6e3; --muted: #a0a6ad;
+    --border: #30343a; --accent: #4cc39a; --accent-soft: #173229;
+    --warn: #e8b64c; --warn-soft: #33290f; --danger: #f07a7f; --danger-soft: #3a1c1e;
+    --code-bg: #25292d; --get: #6ea8ff; --post: #4cc39a; --put: #e8b64c; --del: #f07a7f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: Vazirmatn, Tahoma, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.8;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 44px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 16px; margin: 26px 0 8px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); margin-bottom: 20px; }
+  a { color: var(--accent); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin: 14px 0; }
+  .note { border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+  .note.warn { background: var(--warn-soft); border-inline-start: 4px solid var(--warn); }
+  .note.danger { background: var(--danger-soft); border-inline-start: 4px solid var(--danger); }
+  .note.info { background: var(--accent-soft); border-inline-start: 4px solid var(--accent); }
+  .endpoint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; direction: ltr; justify-content: flex-end; margin: 4px 0 8px; }
+  .method { font: 700 12px/1 ui-monospace, Consolas, monospace; padding: 5px 8px; border-radius: 5px; color: #fff; }
+  .GET { background: var(--get); } .POST { background: var(--post); } .PUT { background: var(--put); } .DELETE { background: var(--del); }
+  .path { font-family: ui-monospace, Consolas, monospace; font-size: 14px; font-weight: 600; word-break: break-all; }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .tag.changed { background: var(--warn-soft); color: var(--warn); }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; direction: ltr; unicode-bidi: embed; }
+  pre { direction: ltr; text-align: left; background: var(--code-bg); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font: 13px/1.6 ui-monospace, Consolas, monospace; margin: 8px 0; }
+  pre code { background: none; padding: 0; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 7px 10px; text-align: start; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  ul { padding-inline-start: 22px; margin: 6px 0; }
+  .toc { columns: 2; column-gap: 28px; }
+  .toc li { break-inside: avoid; }
+  @media (max-width: 640px) { .toc { columns: 1; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>سرویس‌های جدید و تغییرات API</h1>
+<p class="sub">پروژه Di3t Club · تاریخ ۲۸ سپتامبر ۲۰۲۶ · آدرس پایه: <code>https://api.di3t-club.com</code></p>
+
+<div class="card">
+  <p>همه سرویس‌های این گزارش هدر <code>Authorization: Bearer &lt;token&gt;</code> لازم دارند. پاسخ‌ها JSON هستند و خطاهای اعتبارسنجی با کد <code>422</code> و ساختار استاندارد Laravel (<code>message</code> و <code>errors</code>) برمی‌گردند.</p>
+  <p>برچسب <span class="tag">جدید</span> یعنی سرویس تازه اضافه شده و برچسب <span class="tag changed">تغییر</span> یعنی سرویس موجود تغییر کرده است.</p>
+</div>
+
+<h3>فهرست</h3>
+<ol class="toc">
+  <li><a href="#currencies">لیست واحدهای پولی</a></li>
+  <li><a href="#subscriptions">تغییرات اشتراک‌ها</a></li>
+  <li><a href="#diet-items">ماکروهای آیتم غذایی</a></li>
+  <li><a href="#diet-tips">نکات کارشناس</a></li>
+  <li><a href="#today-calories">کالری امروز</a></li>
+  <li><a href="#adherence">میزان پایبندی به برنامه</a></li>
+  <li><a href="#other">تغییرات کوچک دیگر</a></li>
+  <li><a href="#frontend-bugs">مشکلات موجود در فرانت</a></li>
+</ol>
+
+<!-- ============ 1 ============ -->
+<h2 id="currencies">۱. لیست واحدهای پولی</h2>
+<div class="endpoint"><span class="tag">جدید</span><span class="method GET">GET</span><span class="path">/api/currencies</span></div>
+<p>برای Select واحد پولی در فرم اشتراک استفاده کنید. <code>id</code> همان مقداری است که در فیلد <code>currency</code> اشتراک ارسال می‌شود.</p>
+<pre><code>[
+  { "id": 1,  "code": "USD", "label": "دلار" },
+  { "id": 2,  "code": "IQD", "label": "دینار عراقی" },
+  ...
+]</code></pre>
+<div class="table-wrap"><table>
+  <tr><th>id</th><th>code</th><th>label</th><th>id</th><th>code</th><th>label</th></tr>
+  <tr><td>1</td><td>USD</td><td>دلار</td><td>9</td><td>IRT</td><td>تومان</td></tr>
+  <tr><td>2</td><td>IQD</td><td>دینار عراقی</td><td>10</td><td>KWD</td><td>دینار کویت</td></tr>
+  <tr><td>3</td><td>BHD</td><td>دینار بحرین</td><td>11</td><td>DZD</td><td>دینار جزائري</td></tr>
+  <tr><td>4</td><td>OMR</td><td>ریال عمان</td><td>12</td><td>QAR</td><td>ریال قطر</td></tr>
+  <tr><td>5</td><td>SYP</td><td>لیره سوریة</td><td>13</td><td>AED</td><td>درهم امارات</td></tr>
+  <tr><td>6</td><td>LBP</td><td>لیره لبنان</td><td>14</td><td>EUR</td><td>یورو</td></tr>
+  <tr><td>7</td><td>TRY</td><td>لیره ترکیا</td><td>15</td><td>ILS</td><td>شیکل</td></tr>
+  <tr><td>8</td><td>EGP</td><td>جنیه</td><td></td><td></td><td></td></tr>
+</table></div>
+
+<!-- ============ 2 ============ -->
+<h2 id="subscriptions">۲. تغییرات اشتراک‌ها</h2>
+<p>سرویس‌های اشتراک با نسخه فعلی فرانت سازگار هستند. همه فیلدهای قبلی هنوز برمی‌گردند و فقط فیلد اضافه شده است.</p>
+
+<h3>لیست اشتراک‌ها</h3>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method GET">GET</span><span class="path">/api/subscriptions</span></div>
+<ul>
+  <li>پارامتر فیلتر جدید: <code>currency</code> (شناسه واحد پولی). فیلترهای قبلی (<code>user_id</code>، <code>plan_id</code>، <code>status</code>، <code>registration_type</code>، <code>pagesize</code>) بدون تغییرند.</li>
+  <li>فیلدهای جدید در هر ردیف:</li>
+</ul>
+<div class="table-wrap"><table>
+  <tr><th>فیلد</th><th>نوع</th><th>توضیح</th></tr>
+  <tr><td><code>created_at</code></td><td>string</td><td>تاریخ ثبت، به شکل <code>Y-m-d H:i:s</code></td></tr>
+  <tr><td><code>phone</code></td><td>string | null</td><td>موبایل کاربر</td></tr>
+  <tr><td><code>country_id</code></td><td>int | null</td><td>شناسه کشور کاربر</td></tr>
+  <tr><td><code>country</code></td><td>string | null</td><td>نام کشور کاربر</td></tr>
+  <tr><td><code>currency</code></td><td>int | null</td><td>شناسه واحد پولی</td></tr>
+  <tr><td><code>currency_code</code></td><td>string | null</td><td>مثلاً <code>USD</code></td></tr>
+  <tr><td><code>currency_label</code></td><td>string | null</td><td>مثلاً «دلار»</td></tr>
+</table></div>
+<p>«مبلغ پرداخت شده» همان فیلد موجود <code>price</code> است و «اسم» همان فیلد <code>user</code>.</p>
+<pre><code>{
+  "result": [{
+    "id": 120, "user_id": 301, "user": "Reem Alnajjar",
+    "phone": "+971528040089", "country_id": 2, "country": "الإمارات",
+    "plan_id": 30, "price": "150", "currency": 13,
+    "currency_code": "AED", "currency_label": "درهم امارات",
+    "payment_id": null, "status": "active", "start_date": "2026-09-28",
+    "registration_type": "nutrition", "created_at": "2026-09-28 10:12:03"
+  }],
+  "totalCount": 1
+}</code></pre>
+
+<h3>ثبت اشتراک</h3>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method POST">POST</span><span class="path">/api/subscriptions</span></div>
+<ul>
+  <li>فیلد جدید اختیاری: <code>currency</code> (عدد، از لیست <code>/api/currencies</code>).</li>
+  <li>پاسخ موفق (<code>201</code>) حالا همان ساختار یک ردیف لیست است، نه رکورد خام.</li>
+  <li>اگر <code>plan_id</code> صفر یا منفی باشد، رکوردی ساخته نمی‌شود و پاسخ <code>200</code> به این شکل برمی‌گردد: <code>{ "message": "...", "expire_at": "..." }</code>. <code>plan_id</code> منفی یعنی کم کردن روز از اشتراک کاربر (فقط وقتی <code>status=active</code> باشد).</li>
+</ul>
+<pre><code>{
+  "user_id": 301, "plan_id": 30, "price": 150, "currency": 13,
+  "status": "active", "start_date": "2026-09-28",
+  "registration_type": "nutrition", "payment_id": "INV-1022"
+}</code></pre>
+
+<h3>ویرایش اشتراک</h3>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method PUT">PUT</span><span class="path">/api/subscriptions/{id}</span></div>
+<ul>
+  <li>بدنه مثل ثبت است و فیلد <code>currency</code> را هم می‌پذیرد. <code>user_id</code> اجباری است و <code>plan_id</code> باید حداقل ۱ باشد.</li>
+  <li>پاسخ همان ساختار یک ردیف لیست است.</li>
+  <li><strong>رفتار جدید:</strong> ویرایش حالا تاریخ انقضای کاربر (<code>expire_at</code>) را هم به‌روز می‌کند. مثلاً تغییر <code>plan_id</code> از ۳۰ به ۶۰، ۳۰ روز اضافه می‌کند و تغییر وضعیت از <code>active</code> به <code>cancelled</code>، روزها را کم می‌کند.</li>
+  <li>فعلاً پنل ادمین فرم ویرایش اشتراک ندارد.</li>
+</ul>
+
+<h3>دسترسی‌ها</h3>
+<div class="table-wrap"><table>
+  <tr><th>سرویس</th><th>نقش‌های مجاز</th></tr>
+  <tr><td>لیست، ثبت، ویرایش</td><td><code>super_admin</code>، <code>sales_expert</code>، <code>support</code></td></tr>
+  <tr><td>حذف</td><td>فقط <code>super_admin</code></td></tr>
+</table></div>
+<p>کاربر بدون دسترسی پاسخ <code>403</code> با بدنه <code>{ "error": "Unauthorized" }</code> می‌گیرد.</p>
+
+<!-- ============ 3 ============ -->
+<h2 id="diet-items">۳. ماکروهای آیتم غذایی</h2>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method GET">GET</span><span class="path">/api/diet-items/list</span></div>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method GET">GET</span><span class="path">/api/diet-items/{id}</span></div>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method POST">POST</span><span class="path">/api/diet-items</span></div>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method PUT">PUT</span><span class="path">/api/diet-items/{id}</span></div>
+<p>سه فیلد جدید اختیاری به آیتم‌های غذایی اضافه شده است. مقدارها <strong>برای هر گرم</strong> از آیتم هستند (مثل فیلد موجود <code>caloriesGram</code>)، تا ۴ رقم اعشار ذخیره می‌شوند و منفی قبول نمی‌کنند.</p>
+<div class="table-wrap"><table>
+  <tr><th>فیلد</th><th>معنی</th><th>مثال (برنج پخته)</th></tr>
+  <tr><td><code>proteinGram</code></td><td>گرم پروتئین در هر گرم</td><td><code>0.027</code></td></tr>
+  <tr><td><code>carbsGram</code></td><td>گرم کربوهیدرات در هر گرم</td><td><code>0.28</code></td></tr>
+  <tr><td><code>fatGram</code></td><td>گرم چربی (دهون) در هر گرم</td><td><code>0.003</code></td></tr>
+</table></div>
+<p>در ثبت و ویرایش ارسال می‌شوند و در لیست و نمایش آیتم برمی‌گردند. برای آیتم‌های قدیمی مقدارشان <code>null</code> است.</p>
+
+<!-- ============ 4 ============ -->
+<h2 id="diet-tips">۴. نکات کارشناس</h2>
+<p>ادمین یک لیست نکته وارد می‌کند. هر نکته به یک یا چند <strong>نوع رژیم</strong> (همان <code>diet_type_id</code> کاربر، مثل کاهش وزن، افزایش وزن، تثبیت، دیابت و ...) وصل می‌شود. هر کاربر نکات نوع رژیم خودش را به ترتیب اولویت می‌بیند. نکته‌ای که نوع رژیم ندارد، <strong>عمومی</strong> است و به همه نمایش داده می‌شود.</p>
+<ul>
+  <li><strong>اولویت:</strong> عدد کمتر یعنی مهم‌تر. لیست‌ها همیشه از اولویت کم به زیاد مرتب شده‌اند.</li>
+  <li><strong>گزینه‌های نوع رژیم در فرم ادمین:</strong> از سرویس موجود <code>GET /api/diet/types</code> بگیرید.</li>
+  <li><strong>مدیریت نکات</strong> (لیست ادمین، ثبت، ویرایش، حذف): نقش‌های <code>super_admin</code> و <code>nutrition_expert</code>.</li>
+</ul>
+
+<h3>لیست نکات (پنل ادمین)</h3>
+<div class="endpoint"><span class="tag">جدید</span><span class="method GET">GET</span><span class="path">/api/diet-tips</span></div>
+<p>پارامترهای اختیاری: <code>diet_type_id</code> (فقط نکات این نوع رژیم، بدون نکات عمومی)، <code>is_active</code> (۰ یا ۱)، <code>pagesize</code> (پیش‌فرض ۲۰)، <code>page</code>.</p>
+<pre><code>{
+  "result": [{
+    "id": 4,
+    "text": "روزانه حداقل ۸ لیوان آب بنوشید.",
+    "priority": 1,
+    "is_active": true,
+    "diet_types": [
+      { "id": 1, "label": "إنقاص الوزن" },
+      { "id": 4, "label": "السكري" }
+    ],
+    "created_at": "2026-09-28T11:00:00.000000Z",
+    "updated_at": "2026-09-28T11:00:00.000000Z"
+  }],
+  "totalCount": 1
+}</code></pre>
+
+<h3>ثبت نکته</h3>
+<div class="endpoint"><span class="tag">جدید</span><span class="method POST">POST</span><span class="path">/api/diet-tips</span></div>
+<div class="table-wrap"><table>
+  <tr><th>فیلد</th><th>اجباری</th><th>توضیح</th></tr>
+  <tr><td><code>text</code></td><td>بله</td><td>متن نکته، حداکثر ۵۰۰۰ کاراکتر</td></tr>
+  <tr><td><code>priority</code></td><td>خیر</td><td>عدد ۱ به بالا. اگر خالی باشد، به انتهای لیست می‌رود.</td></tr>
+  <tr><td><code>is_active</code></td><td>خیر</td><td>پیش‌فرض <code>true</code></td></tr>
+  <tr><td><code>diet_type_ids</code></td><td>خیر</td><td>آرایه شناسه نوع رژیم. خالی یا ارسال‌نشده یعنی نکته عمومی.</td></tr>
+</table></div>
+<pre><code>{ "text": "روزانه حداقل ۸ لیوان آب بنوشید.", "priority": 1, "diet_type_ids": [1, 4] }</code></pre>
+<p>پاسخ <code>201</code> همان ساختار یک ردیف از لیست ادمین است.</p>
+
+<h3>ویرایش و حذف نکته</h3>
+<div class="endpoint"><span class="tag">جدید</span><span class="method PUT">PUT</span><span class="path">/api/diet-tips/{id}</span></div>
+<div class="endpoint"><span class="tag">جدید</span><span class="method DELETE">DELETE</span><span class="path">/api/diet-tips/{id}</span></div>
+<ul>
+  <li>در ویرایش همه فیلدها اختیاری‌اند و فقط فیلدهای ارسال‌شده عوض می‌شوند.</li>
+  <li>اگر <code>diet_type_ids</code> ارسال شود، جایگزین لیست قبلی می‌شود. آرایه خالی <code>[]</code> نکته را عمومی می‌کند.</li>
+  <li>نکته یافت‌نشده: <code>404</code>.</li>
+</ul>
+
+<h3>نکات کاربر (اپ کاربر)</h3>
+<div class="endpoint"><span class="tag">جدید</span><span class="method GET">GET</span><span class="path">/api/diet-tips/user</span></div>
+<p>نکات فعالِ نوع رژیم کاربر لاگین‌شده به‌همراه نکات عمومی، به ترتیب اولویت. نقش‌های <code>super_admin</code>، <code>nutrition_expert</code> و <code>support</code> می‌توانند با پارامتر <code>user_id</code> نکات هر کاربری را ببینند.</p>
+<pre><code>[
+  { "id": 4, "text": "روزانه حداقل ۸ لیوان آب بنوشید.", "priority": 1 },
+  { "id": 7, "text": "وعده شام را حداقل ۳ ساعت قبل از خواب بخورید.", "priority": 2 }
+]</code></pre>
+
+<h3>نکات در خروجی برنامه غذایی</h3>
+<p>فیلد <code>tips</code> با همان ساختار بالا به خروجی این سرویس‌های موجود اضافه شده است. پس اگر برنامه غذایی را نمایش می‌دهید، به فراخوانی جداگانه نیازی ندارید.</p>
+<div class="table-wrap"><table>
+  <tr><th>سرویس</th><th>محل فیلد</th></tr>
+  <tr><td><code>GET /api/last-user-weekly</code></td><td><code>latest_diet_plan.tips</code></td></tr>
+  <tr><td><code>GET /api/last-user-weekly-items</code></td><td><code>[0].tips</code></td></tr>
+  <tr><td><code>GET /api/user-weekly/{id}</code> (پنل ادمین)</td><td><code>tips</code></td></tr>
+</table></div>
+<div class="note info">لیست نکات در ابتدا خالی است. تا ادمین نکته‌ای ثبت نکند، <code>tips</code> آرایه خالی برمی‌گرداند.</div>
+
+<!-- ============ 5 ============ -->
+<h2 id="today-calories">۵. کالری امروز</h2>
+<div class="endpoint"><span class="tag">جدید</span><span class="method GET">GET</span><span class="path">/api/today-calories</span></div>
+<p>کالری کل روز و کالری هر وعده را از آخرین برنامه غذایی کاربر برمی‌گرداند. روز برنامه (۱ تا ۷) از فاصله تاریخ امروز تا <code>fromdate</code> برنامه حساب می‌شود.</p>
+<div class="table-wrap"><table>
+  <tr><th>پارامتر</th><th>توضیح</th></tr>
+  <tr><td><code>date</code></td><td>اختیاری، به شکل <code>YYYY-MM-DD</code>. پیش‌فرض امروز است.</td></tr>
+  <tr><td><code>user_id</code></td><td>اختیاری، فقط برای <code>super_admin</code>، <code>nutrition_expert</code> و <code>support</code>. کاربر عادی همیشه اطلاعات خودش را می‌گیرد.</td></tr>
+</table></div>
+<pre><code>{
+  "user_id": 301,
+  "user_weekly_id": 812,
+  "date": "2026-09-28",
+  "plan_day": 3,
+  "fromdate": "2026-09-26",
+  "todate": "2026-10-03",
+  "target_calories": 1650.0,
+  "total_calories": 1648.5,
+  "meals": [
+    {
+      "meal_type_id": 1,
+      "meal_type": "الفطور",
+      "calories": 410.0,
+      "items": [
+        { "mealId": 55, "mealItemId": 1307, "itemTitle": "لبن",
+          "unit": "كوب", "unitCount": 1, "calories": 120.0 }
+      ]
+    }
+  ]
+}</code></pre>
+<ul>
+  <li><code>target_calories</code>: کالری هدف روزانه برنامه. <code>total_calories</code>: جمع کالری وعده‌های همین روز.</li>
+  <li>وعده‌ها به همان ترتیب سرویس‌های دیگر برنامه غذایی مرتب شده‌اند: صبحانه، میان‌وعده صبح، قبل از ناهار، ناهار، عصرانه، شام، بعد از شام و بعد حصه‌ها.</li>
+</ul>
+<div class="table-wrap"><table>
+  <tr><th>کد</th><th>حالت</th></tr>
+  <tr><td><code>404</code></td><td>کاربر برنامه غذایی ندارد، یا برنامه‌اش تمام شده است (پیام «برنامه غذایی کاربر به پایان رسیده است» به‌همراه <code>todate</code>).</td></tr>
+  <tr><td><code>422</code></td><td>برنامه هنوز شروع نشده است (به‌همراه <code>fromdate</code>).</td></tr>
+  <tr><td><code>403</code></td><td>کاربر عادی <code>user_id</code> کاربر دیگری را فرستاده است.</td></tr>
+</table></div>
+
+<!-- ============ 6 ============ -->
+<h2 id="adherence">۶. میزان پایبندی به برنامه</h2>
+<p>هر روزی که کاربر در بازه برنامه‌اش برنامه غذایی را باز کند، یک روز پایبندی برایش ثبت می‌شود. در هر روز حداکثر یک بار ثبت می‌شود.</p>
+
+<h3>ثبت خودکار</h3>
+<p>برای ثبت، فرانت کار اضافه‌ای لازم ندارد. وقتی <strong>خود کاربر</strong> یکی از این سرویس‌ها را صدا بزند، روز پایبندی ثبت می‌شود:</p>
+<ul>
+  <li><code>GET /api/last-user-weekly</code></li>
+  <li><code>GET /api/last-user-weekly-items</code></li>
+  <li><code>GET /api/today-calories</code> (فقط بدون پارامتر <code>date</code> و <code>user_id</code>)</li>
+</ul>
+<p>اگر برنامه هنوز شروع نشده یا تمام شده باشد، روزی ثبت نمی‌شود. وقتی کارشناس برنامه کاربر را در پنل ادمین می‌بیند، برای کاربر چیزی ثبت نمی‌شود.</p>
+
+<h3>دریافت میزان پایبندی</h3>
+<div class="endpoint"><span class="tag">جدید</span><span class="method GET">GET</span><span class="path">/api/adherence</span></div>
+<p>کاربر عادی مقدار خودش را می‌گیرد. نقش‌های <code>super_admin</code>، <code>nutrition_expert</code> و <code>support</code> می‌توانند پارامتر <code>user_id</code> بفرستند.</p>
+<pre><code>{
+  "user_id": 301,
+  "total_days": 18,
+  "last_checked_date": "2026-09-28",
+  "current_plan": {
+    "user_weekly_id": 812,
+    "fromdate": "2026-09-26",
+    "todate": "2026-10-03",
+    "elapsed_days": 3,
+    "checked_days": 2,
+    "percent": 66.7
+  }
+}</code></pre>
+<div class="table-wrap"><table>
+  <tr><th>فیلد</th><th>معنی</th></tr>
+  <tr><td><code>total_days</code></td><td>کل روزهای پایبندی کاربر از ابتدا</td></tr>
+  <tr><td><code>last_checked_date</code></td><td>آخرین روزی که کاربر برنامه را چک کرده، یا <code>null</code></td></tr>
+  <tr><td><code>current_plan</code></td><td>اطلاعات آخرین برنامه کاربر، یا <code>null</code> اگر برنامه‌ای ندارد</td></tr>
+  <tr><td><code>elapsed_days</code></td><td>روزهای سپری‌شده از برنامه تا امروز، حداکثر ۷</td></tr>
+  <tr><td><code>checked_days</code></td><td>روزهایی از این برنامه که کاربر برنامه را چک کرده</td></tr>
+  <tr><td><code>percent</code></td><td>درصد پایبندی در این برنامه (<code>checked_days</code> تقسیم بر <code>elapsed_days</code>)</td></tr>
+</table></div>
+<div class="note info">شمارش از زمان انتشار این نسخه شروع شده است و روزهای قبل از آن ثبت نشده‌اند.</div>
+
+<!-- ============ 7 ============ -->
+<h2 id="other">۷. تغییرات کوچک دیگر</h2>
+<div class="table-wrap"><table>
+  <tr><th>سرویس</th><th>تغییر</th></tr>
+  <tr><td><code>PUT /api/exercises/{id}</code></td><td>قبلاً فقط <code>POST</code> برای ویرایش تمرین پشتیبانی می‌شد و <code>PUT</code> خطای ۴۰۵ می‌داد. حالا هر دو کار می‌کنند.</td></tr>
+  <tr><td><code>GET /api/user-visit-logs/report</code></td><td>اگر <code>from</code> و <code>to</code> ارسال شوند، دیگر لازم نیست <code>period</code> را هم بفرستید و خودکار <code>custom</code> در نظر گرفته می‌شود.</td></tr>
+  <tr><td><code>POST</code> و <code>PUT /api/exercise-programs</code></td><td>آیتم‌های <code>days</code> حالا هم به شکل عدد (<code>[104]</code>) و هم به شکل آبجکت (<code>[{"exercise_id":104}]</code> یا <code>{"muscle_id":..}</code>) پذیرفته می‌شوند. قبلاً شکل آبجکت خطای ۵۰۰ می‌داد.</td></tr>
+  <tr><td><code>POST /api/diet-meals</code></td><td>فیلد <code>mealCategories</code> اختیاری شد. قبلاً اگر ارسال نمی‌شد، خطای ۵۰۰ برمی‌گشت.</td></tr>
+  <tr><td><code>GET</code>، <code>PUT</code>، <code>DELETE /api/payments</code></td><td>حالا توکن لازم دارند. بدون توکن خطای احراز هویت برمی‌گردد (با هدر <code>Accept: application/json</code> کد <code>401</code>). قبلاً لیست پرداخت‌ها بدون توکن خطای ۵۰۰ می‌داد. <code>POST /api/payments</code> تغییری نکرده است.</td></tr>
+  <tr><td><code>POST /api/createUser</code></td><td>اگر ارسال ایمیل خوش‌آمدگویی خطا بدهد، ثبت‌نام دیگر خطای ۵۰۰ نمی‌دهد. کاربر ساخته می‌شود و خطای ایمیل فقط در لاگ سرور ثبت می‌شود.</td></tr>
+</table></div>
+
+<!-- ============ 8 ============ -->
+<h2 id="frontend-bugs">۸. مشکلات موجود در فرانت (پنل ادمین)</h2>
+<p>این دو مشکل در کد فعلی <code>diet-admin</code> وجود داشتند و ربطی به تغییرات بک‌اند ندارند:</p>
+<div class="note danger">
+  <strong>وضعیت <code>expired</code> جدول اشتراک‌ها را خراب می‌کند.</strong>
+  در <code>src/sections/admin/subscriptions/subscriptions-table.tsx</code> ثابت <code>statusRename</code> فقط <code>active</code>، <code>cancelled</code> و <code>pending</code> را دارد. بک‌اند وضعیت <code>expired</code> را هم برمی‌گرداند. در آن صورت <code>statusRename[data].color</code> خطا می‌دهد و صفحه از کار می‌افتد. نوع <code>StatusSubscriptions</code> در <code>subscriptions.interface.ts</code> هم باید <code>expired</code> را داشته باشد.
+</div>
+<div class="note warn">
+  <strong>لیست اشتراک‌ها بعد از ثبت اشتراک به‌روز نمی‌شود.</strong>
+  در <code>use-create-subscription.ts</code> بعد از ثبت موفق فقط <code>listUsers</code> و <code>detailUser</code> دوباره بارگذاری می‌شوند. کلید <code>listSubscriptions</code> هم باید اضافه شود.
+</div>
+
+</div>
+</body>
+</html>

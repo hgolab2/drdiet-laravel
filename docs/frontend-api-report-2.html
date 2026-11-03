@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تغییرات جدید API</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1f2328; --muted: #5f6670;
+    --border: #e3e3df; --accent: #0b6e4f; --accent-soft: #e4f2ec;
+    --warn: #8a5a00; --warn-soft: #fff4dc;
+    --code-bg: #f1f1ee; --get: #1f6feb; --post: #0b6e4f; --put: #8a5a00; --del: #a4262c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151719; --surface: #1d2023; --text: #e6e6e3; --muted: #a0a6ad;
+      --border: #30343a; --accent: #4cc39a; --accent-soft: #173229;
+      --warn: #e8b64c; --warn-soft: #33290f;
+      --code-bg: #25292d; --get: #6ea8ff; --post: #4cc39a; --put: #e8b64c; --del: #f07a7f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151719; --surface: #1d2023; --text: #e6e6e3; --muted: #a0a6ad;
+    --border: #30343a; --accent: #4cc39a; --accent-soft: #173229;
+    --warn: #e8b64c; --warn-soft: #33290f;
+    --code-bg: #25292d; --get: #6ea8ff; --post: #4cc39a; --put: #e8b64c; --del: #f07a7f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: Vazirmatn, Tahoma, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.8;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 44px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 16px; margin: 26px 0 8px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); margin-bottom: 20px; }
+  a { color: var(--accent); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin: 14px 0; }
+  .note { border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+  .note.warn { background: var(--warn-soft); border-inline-start: 4px solid var(--warn); }
+  .note.info { background: var(--accent-soft); border-inline-start: 4px solid var(--accent); }
+  .endpoint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; direction: ltr; justify-content: flex-end; margin: 4px 0 8px; }
+  .method { font: 700 12px/1 ui-monospace, Consolas, monospace; padding: 5px 8px; border-radius: 5px; color: #fff; }
+  .GET { background: var(--get); } .POST { background: var(--post); } .PUT { background: var(--put); } .DELETE { background: var(--del); }
+  .path { font-family: ui-monospace, Consolas, monospace; font-size: 14px; font-weight: 600; word-break: break-all; }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .tag.changed { background: var(--warn-soft); color: var(--warn); }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; direction: ltr; unicode-bidi: embed; }
+  pre { direction: ltr; text-align: left; background: var(--code-bg); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font: 13px/1.6 ui-monospace, Consolas, monospace; margin: 8px 0; }
+  pre code { background: none; padding: 0; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 7px 10px; text-align: start; vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; }
+  ul, ol { padding-inline-start: 22px; margin: 6px 0; }
+  @media (max-width: 640px) { h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>تغییرات جدید API — بخش دوم</h1>
+<p class="sub">پروژه Di3t Club · تاریخ ۲۹ سپتامبر ۲۰۲۶ · آدرس پایه: <code>https://api.di3t-club.com</code> · ادامه گزارش «سرویس‌های جدید و تغییرات API»</p>
+
+<div class="card">
+  <p>همه سرویس‌ها هدر <code>Authorization: Bearer &lt;token&gt;</code> لازم دارند. هیچ فیلدی از خروجی سرویس‌ها حذف یا تغییرنام نشده است و کد فعلی فرانت بدون تغییر کار می‌کند.</p>
+  <p>برچسب <span class="tag">جدید</span> یعنی قابلیت تازه و <span class="tag changed">تغییر</span> یعنی سرویس موجود تغییر کرده است.</p>
+</div>
+
+<h3>فهرست</h3>
+<ol>
+  <li><a href="#role">نقش جدید «مدیر بازاریابی» (<code>marketing_manager</code>)</a></li>
+  <li><a href="#date-range">فیلتر بازه تاریخ در لیست سرنخ‌ها و گزارش منبع</a></li>
+</ol>
+
+<!-- ============ 1 ============ -->
+<h2 id="role">۱. نقش جدید «مدیر بازاریابی»</h2>
+<p>نام سیستمی نقش <code>marketing_manager</code> است. این نقش باید به این چهار صفحه پنل ادمین دسترسی داشته باشد: <strong>داشبورد</strong>، <strong>CRM</strong>، <strong>اشتراک‌ها</strong> و <strong>تنظیمات</strong>. بک‌اند آماده است و کارهای فرانت در ادامه آمده است.</p>
+<p>نقش مثل بقیه نقش‌ها در لیست نقش‌ها (صفحه «فريق الدايت») و در <code>roles</code> کاربر لاگین‌شده برمی‌گردد.</p>
+
+<h3>دسترسی این نقش در بک‌اند</h3>
+<div class="table-wrap"><table>
+  <tr><th>صفحه</th><th>سرویس‌ها</th><th>وضعیت</th></tr>
+  <tr>
+    <td>داشبورد</td>
+    <td><code>GET /api/diet-leads-statistics</code><br><code>GET /api/admin/diet-leads/source-report</code><br><code>GET /api/user-visit-logs/report</code></td>
+    <td>✅ مجاز</td>
+  </tr>
+  <tr>
+    <td>CRM</td>
+    <td><code>GET /api/diet-leads</code>، <code>GET</code>، <code>PUT</code> و <code>DELETE /api/diet-leads/{id}</code><br><code>POST /api/diet-leads/assign-level-one</code><br><code>POST /api/diet-leads/{id}/increase-level</code></td>
+    <td>✅ مجاز</td>
+  </tr>
+  <tr>
+    <td>CRM (دراپ‌داون کارشناس‌ها)</td>
+    <td><code>POST /api/diet-users?...&amp;is_role=true</code></td>
+    <td>✅ فقط با <code>is_role=true</code>. این نقش فقط لیست اعضای تیم را می‌بیند. بدون این پارامتر (لیست مشتریان) پاسخ <code>403</code> می‌گیرد.</td>
+  </tr>
+  <tr>
+    <td>اشتراک‌ها</td>
+    <td><code>GET</code> و <code>POST /api/subscriptions</code>، <code>PUT /api/subscriptions/{id}</code>، <code>GET /api/currencies</code></td>
+    <td>✅ مجاز</td>
+  </tr>
+  <tr>
+    <td>اشتراک‌ها (حذف)</td>
+    <td><code>DELETE /api/subscriptions/{id}</code></td>
+    <td>❌ فقط <code>super_admin</code>. پاسخ <code>403</code> می‌گیرد.</td>
+  </tr>
+  <tr>
+    <td>تنظیمات</td>
+    <td><code>GET /api/settings/{key}</code>، <code>POST /api/settings</code>، <code>PUT /api/settings/{key}</code></td>
+    <td>✅ مجاز</td>
+  </tr>
+</table></div>
+
+<h3>کارهای لازم در فرانت (<code>diet-admin</code>)</h3>
+<div class="table-wrap"><table>
+  <tr><th>فایل</th><th>تغییر</th></tr>
+  <tr><td><code>src/types/admin/auth.interface.ts</code></td><td>اضافه کردن <code>'marketing_manager'</code> به <code>UserRole</code></td></tr>
+  <tr><td><code>src/data/admin/sidebar-data.tsx</code></td><td>اضافه کردن <code>'marketing_manager'</code> به <code>roles</code> منوهای <code>/</code>، <code>/diet-leads</code>، <code>/subscriptions</code> و <code>/settings</code></td></tr>
+  <tr><td><code>src/routes/admin-routes.tsx</code></td><td>اضافه کردن <code>'marketing_manager'</code> به <code>withProtection</code> مسیرهای <code>/</code>، <code>diet-leads</code>، <code>subscriptions</code> و <code>settings</code></td></tr>
+  <tr><td><code>src/sections/admin/users/users-table-team.tsx</code></td><td>عنوان نقش در <code>roleName</code>، مثلاً <code>marketing_manager: 'مدير التسويق'</code></td></tr>
+  <tr><td>جدول اشتراک‌ها</td><td>مخفی کردن دکمه حذف برای این نقش، چون بک‌اند اجازه حذف نمی‌دهد</td></tr>
+</table></div>
+<div class="note info">داشبورد برای این نقش همان نمای کامل (گزارش منبع، نمودار بیماری، آمار سرنخ‌ها و بازدید صفحات) را نشان می‌دهد. نمای مخصوص <code>sales_expert</code> فقط برای همان نقش است و تغییری لازم ندارد.</div>
+
+<!-- ============ 2 ============ -->
+<h2 id="date-range">۲. فیلتر بازه تاریخ در لیست سرنخ‌ها و گزارش منبع</h2>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method GET">GET</span><span class="path">/api/diet-leads</span></div>
+<div class="endpoint"><span class="tag changed">تغییر</span><span class="method GET">GET</span><span class="path">/api/admin/diet-leads/source-report</span></div>
+<p>دو پارامتر اختیاری جدید، با همان نام و رفتاری که سرویس <code>GET /api/diet-leads-statistics</code> از قبل دارد:</p>
+<div class="table-wrap"><table>
+  <tr><th>پارامتر</th><th>قالب</th><th>توضیح</th></tr>
+  <tr><td><code>date_from</code></td><td><code>YYYY-MM-DD</code></td><td>شروع بازه، شامل همان روز (از ساعت 00:00:00)</td></tr>
+  <tr><td><code>date_to</code></td><td><code>YYYY-MM-DD</code></td><td>پایان بازه، شامل همان روز (تا ساعت 23:59:59)</td></tr>
+</table></div>
+<ul>
+  <li>بازه بر اساس <strong>تاریخ ثبت سرنخ</strong> (<code>created_at</code>) است.</li>
+  <li>دو پارامتر باید <strong>با هم</strong> ارسال شوند. اگر فقط یکی ارسال شود یا <code>date_to</code> قبل از <code>date_from</code> باشد، پاسخ <code>422</code> برمی‌گردد.</li>
+  <li>اگر هیچ‌کدام ارسال نشوند، سرویس‌ها مثل قبل کار می‌کنند.</li>
+  <li>برای انتخاب بازه، <code>RangePicker</code> از antd مناسب است: <code>date_from = range[0].format('YYYY-MM-DD')</code> و <code>date_to = range[1].format('YYYY-MM-DD')</code>.</li>
+</ul>
+
+<h3>لیست سرنخ‌ها</h3>
+<p>بازه تاریخ با فیلترهای قبلی (موبایل، جنسیت، کارشناس، وضعیت، سطح، کشور و …) ترکیب می‌شود. <code>totalCount</code> و صفحه‌بندی بر اساس نتیجه فیلترشده است. ساختار خروجی تغییری نکرده است.</p>
+<pre><code>GET /api/diet-leads?date_from=2026-09-01&amp;date_to=2026-09-30&amp;status=0&amp;pagesize=20&amp;page=1</code></pre>
+
+<h3>گزارش منبع سرنخ‌ها</h3>
+<p>ساختار خروجی تغییری نکرده است: <code>source</code>، <code>total</code>، <code>total_not_contacted</code>، <code>today_*</code>، <code>yesterday_*</code>، <code>week_*</code> و <code>month_*</code>. با بازه تاریخ، <strong>همه ستون‌ها فقط سرنخ‌های داخل بازه را می‌شمارند:</strong></p>
+<ul>
+  <li><code>total</code> و <code>total_not_contacted</code>: کل و تماس‌نگرفته‌های داخل بازه. این دو ستون اصلی برای نمایش گزارش بازه‌ای هستند.</li>
+  <li>ستون‌های امروز، دیروز، هفته و ماه: فقط بخشی از خودشان که داخل بازه است. مثلاً اگر بازه شامل امروز نباشد، <code>today_total</code> صفر است.</li>
+</ul>
+<pre><code>GET /api/admin/diet-leads/source-report?date_from=2026-09-01&amp;date_to=2026-09-30</code></pre>
+<div class="note info">پیشنهاد: وقتی بازه انتخاب شده، در جدول گزارش منبع ستون‌های <code>total</code> و <code>total_not_contacted</code> را با عنوان بازه نمایش دهید و ستون‌های امروز، دیروز، هفته و ماه را مخفی کنید.</div>
+
+</div>
+</body>
+</html>

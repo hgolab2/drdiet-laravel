@@ -236,11 +236,6 @@ class DietMealController extends Controller
             $query->whereHas('foodCultures', function ($q) use ($cultureIds) {
                 $q->whereIn('food_culture_id', $cultureIds);
             });
-        } elseif (!$isStaff && $user->usesFoodCulture()) {
-            // برنامه عادی: فقط وعده‌های فرهنگ غذایی کاربر؛ سایر برنامه‌ها بین‌المللی هستند
-            $query->whereHas('foodCultures', function ($q) use ($user) {
-                $q->where('food_culture_id', $user->food_culture);
-            });
         }
         $totalCount = $query->count();
         $meals = $query->orderBy('id', 'desc')->paginate($pageSize);
