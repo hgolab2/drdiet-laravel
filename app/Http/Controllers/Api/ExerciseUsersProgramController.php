@@ -651,7 +651,10 @@ class ExerciseUsersProgramController extends Controller
         }
 
         $defaultMuscleId = $item->item?->muscle_id ?: $item->exercise?->muscles->first()?->id;
-        $muscleId = $request->filled('muscle_id') ? (int) $request->muscle_id : $defaultMuscleId;
+        // با جستجو و بدون انتخاب دسته، در همه‌ی دسته‌ها جستجو می‌شود
+        $muscleId = $request->filled('muscle_id')
+            ? (int) $request->muscle_id
+            : ($request->filled('q') ? null : $defaultMuscleId);
 
         $query = $this->alternativesQuery($item, $muscleId, $muscleId === null);
         if ($request->filled('q')) {
