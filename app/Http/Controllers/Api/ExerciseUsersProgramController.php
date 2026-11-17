@@ -586,4 +586,118 @@ class ExerciseUsersProgramController extends Controller
         ]);
         //return response()->json($program);
     }
+
+    /**
+     * جستجوی تمرین‌های جایگزین برای یک آیتم برنامه ورزشی کاربر (همان عضله، جنسیت، مکان و هدف).
+     */
+    private function alternativesQuery(ExerciseUsersProgramItem $item)
+    {
+        $program = $item->program;
+        $base = $program?->program;
+        $muscleId = $item->item?->muscle_id;
+        $currentIds = ExerciseUsersProgramItem::where('exercise_users_program_id', $item->exercise_users_program_id)
+            ->pluck('exercise_id')->all();
+
+        $query = \App\Models\Exercise::query()->whereNotIn('id', $currentIds);
+
+        if ($muscleId) {
+            $query->whereHas('muscles', fn ($q) => $q->where('muscle.id', $muscleId));
+        } else {
+            $muscleIds = $item->exercise?->muscles->pluck('id')->all() ?? [];
+            if (empty($muscleIds)) {
+                return $query->whereRaw('1 = 0');
+            }
+            $query->whereHas('muscles', fn ($q) => $q->whereIn('muscle.id', $muscleIds));
+        }
+
+        if ($base) {
+            if ($base->gender && $base->gender !== 'both') {
+                $query->whereIn('gender', [$base->gender, 'both']);
+            }
+            if (!empty($base->location_id)) {
+                $query->whereHas('locations', fn ($q) => $q->where('location_id', $base->location_id));
+            }
+            if (!empty($base->goal_id)) {
+                $query->whereHas('goals', fn ($q) => $q->where('goal_id', $base->goal_id));
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/exercise-users-program-items/{id}/alternatives",
+     *     summary="تمرین‌های جایگزین برای یک حرکت برنامه ورزشی کاربر",
+     *     tags={"ExerciseUsersPrograms"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, description="شناسه آیتم برنامه کاربر (items.id در exercise-program-detail)", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="لیست تمرین‌های جایگزین"),
+     *     @OA\Response(response=404, description="آیتم یافت نشد")
+     * )
+     */
+    public function alternatives($id)
+    {
+        $user = Auth::user();
+        $item = ExerciseUsersProgramItem::where('id', $id)->where('user_id', $user->id)->first();
+        if (!$item) {
+            return response()->json(['message' => 'Item not found'], 404);
+        }
+
+        $exercises = $this->alternativesQuery($item)
+            ->with(['image1', 'image2'])
+            ->orderBy('name_ar')
+            ->limit(50)
+            ->get()
+            ->map(fn ($e) => [
+                'id' => $e->id,
+                'name_en' => $e->name_en,
+                'name_ar' => $e->name_ar,
+                'imageUrl1' => $e->image1?->url(),
+                'imageUrl2' => $e->image2?->url(),
+            ]);
+
+        return response()->json(['items' => $exercises]);
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/exercise-users-program-items/{id}/replace",
+     *     summary="جایگزین کردن یک حرکت برنامه ورزشی کاربر با تمرین دیگر",
+     *     tags={"ExerciseUsersPrograms"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(
+     *         @OA\Property(property="exercise_id", type="integer", example=12, description="شناسه تمرین جدید (از alternatives)")
+     *     )),
+     *     @OA\Response(response=200, description="حرکت جایگزین شد"),
+     *     @OA\Response(response=404, description="آیتم یافت نشد"),
+     *     @OA\Response(response=422, description="تمرین جایگزین نامعتبر")
+     * )
+     */
+    public function replace(Request $request, $id)
+    {
+        $user = Auth::user();
+        $item = ExerciseUsersProgramItem::where('id', $id)->where('user_id', $user->id)->first();
+        if (!$item) {
+            return response()->json(['message' => 'Item not found'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'exercise_id' => 'required|integer|exists:exercises,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $allowed = $this->alternativesQuery($item)->where('id', $request->exercise_id)->exists();
+        if (!$allowed) {
+            return response()->json(['message' => 'هذا التمرين غير مناسب كبديل'], 422);
+        }
+
+        $item->exercise_id = $request->exercise_id;
+        $item->save();
+
+        return response()->json(['message' => 'Exercise replaced successfully']);
+    }
 }
