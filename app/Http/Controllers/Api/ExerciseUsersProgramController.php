@@ -716,6 +716,7 @@ class ExerciseUsersProgramController extends Controller
 
         $validator = Validator::make($request->all(), [
             'exercise_id' => 'required|integer|exists:exercises,id',
+            'set' => 'nullable|integer|min:1|max:20',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -727,6 +728,9 @@ class ExerciseUsersProgramController extends Controller
         }
 
         $item->exercise_id = $request->exercise_id;
+        if ($request->filled('set')) {
+            $item->set = (int) $request->set;
+        }
         $item->save();
 
         return response()->json(['message' => 'Exercise replaced successfully']);
