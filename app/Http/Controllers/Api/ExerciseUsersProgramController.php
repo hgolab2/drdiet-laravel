@@ -590,7 +590,7 @@ class ExerciseUsersProgramController extends Controller
     /**
      * جستجوی تمرین‌های جایگزین برای یک آیتم برنامه ورزشی کاربر (همان عضله، جنسیت، مکان و هدف).
      */
-    private function alternativesQuery(ExerciseUsersProgramItem $item)
+    private function alternativesQuery(ExerciseUsersProgramItem $item, $muscleOverride = null, bool $anyMuscle = false)
     {
         $program = $item->program;
         $base = $program?->program;
@@ -600,7 +600,11 @@ class ExerciseUsersProgramController extends Controller
 
         $query = \App\Models\Exercise::query()->whereNotIn('id', $currentIds);
 
-        if ($muscleId) {
+        if ($anyMuscle) {
+            // بدون محدودیت عضله (برای اعتبارسنجی جایگزینی از هر دسته)
+        } elseif ($muscleOverride) {
+            $query->whereHas('muscles', fn ($q) => $q->where('muscle.id', $muscleOverride));
+        } elseif ($muscleId) {
             $query->whereHas('muscles', fn ($q) => $q->where('muscle.id', $muscleId));
         } else {
             $muscleIds = $item->exercise?->muscles->pluck('id')->all() ?? [];
@@ -632,11 +636,13 @@ class ExerciseUsersProgramController extends Controller
      *     tags={"ExerciseUsersPrograms"},
      *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(name="id", in="path", required=true, description="شناسه آیتم برنامه کاربر (items.id در exercise-program-detail)", @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="لیست تمرین‌های جایگزین"),
+     *     @OA\Parameter(name="q", in="query", required=false, description="جستجو در نام تمرین (عربی/انگلیسی/فارسی)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="muscle_id", in="query", required=false, description="فیلتر دسته (عضله)؛ پیش‌فرض عضله‌ی خود حرکت", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="items + categories (دسته‌ها) + default_muscle_id"),
      *     @OA\Response(response=404, description="آیتم یافت نشد")
      * )
      */
-    public function alternatives($id)
+    public function alternatives(Request $request, $id)
     {
         $user = Auth::user();
         $item = ExerciseUsersProgramItem::where('id', $id)->where('user_id', $user->id)->first();
@@ -644,10 +650,21 @@ class ExerciseUsersProgramController extends Controller
             return response()->json(['message' => 'Item not found'], 404);
         }
 
-        $exercises = $this->alternativesQuery($item)
+        $defaultMuscleId = $item->item?->muscle_id ?: $item->exercise?->muscles->first()?->id;
+        $muscleId = $request->filled('muscle_id') ? (int) $request->muscle_id : $defaultMuscleId;
+
+        $query = $this->alternativesQuery($item, $muscleId, $muscleId === null);
+        if ($request->filled('q')) {
+            $term = '%' . str_replace(['%', '_'], ['\%', '\_'], trim($request->q)) . '%';
+            $query->where(fn ($q) => $q->where('name_ar', 'like', $term)
+                ->orWhere('name_en', 'like', $term)
+                ->orWhere('name_fa', 'like', $term));
+        }
+
+        $exercises = $query
             ->with(['image1', 'image2'])
             ->orderBy('name_ar')
-            ->limit(50)
+            ->limit(100)
             ->get()
             ->map(fn ($e) => [
                 'id' => $e->id,
@@ -657,7 +674,21 @@ class ExerciseUsersProgramController extends Controller
                 'imageUrl2' => $e->image2?->url(),
             ]);
 
-        return response()->json(['items' => $exercises]);
+        // دسته‌ها = عضله‌هایی که تمرین مناسب (جنسیت/مکان/هدف) دارند
+        $categories = \App\Models\Muscle::query()
+            ->whereIn('id', function ($sub) use ($item) {
+                $ids = $this->alternativesQuery($item, null, true)->pluck('id');
+                $sub->select('muscle_id')->from('exercise_muscle')->whereIn('exercise_id', $ids);
+            })
+            ->orderBy('name_ar')
+            ->get(['id', 'name_ar', 'name_en'])
+            ->map(fn ($m) => ['id' => $m->id, 'name_ar' => $m->name_ar, 'name_en' => $m->name_en]);
+
+        return response()->json([
+            'items' => $exercises,
+            'categories' => $categories,
+            'default_muscle_id' => $defaultMuscleId,
+        ]);
     }
 
     /**
@@ -690,7 +721,7 @@ class ExerciseUsersProgramController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $allowed = $this->alternativesQuery($item)->where('id', $request->exercise_id)->exists();
+        $allowed = $this->alternativesQuery($item, null, true)->where('id', $request->exercise_id)->exists();
         if (!$allowed) {
             return response()->json(['message' => 'هذا التمرين غير مناسب كبديل'], 422);
         }
