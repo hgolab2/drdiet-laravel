@@ -40,6 +40,8 @@ Route::post('/exercise-users-programs', [ExerciseUsersProgramController::class, 
 Route::get('/exercise-users-programs/{id}', [ExerciseUsersProgramController::class, 'show']);
 Route::delete('/exercise-users-programs/{id}', [ExerciseUsersProgramController::class, 'destroy']);
 Route::get('/exercise-program-detail', [ExerciseUsersProgramController::class, 'detail']);
+Route::get('/exercise-users-program-items/{id}/alternatives', [ExerciseUsersProgramController::class, 'alternatives']);
+Route::put('/exercise-users-program-items/{id}/replace', [ExerciseUsersProgramController::class, 'replace']);
 
 Route::get('/exercise-programs', [ExerciseProgramController::class, 'index']);
 Route::post('/exercise-programs', [ExerciseProgramController::class, 'store']);
