@@ -702,7 +702,9 @@ class ExerciseUsersProgramController extends Controller
      *     security={{"bearerAuth":{}}},
      *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\RequestBody(required=true, @OA\JsonContent(
-     *         @OA\Property(property="exercise_id", type="integer", example=12, description="شناسه تمرین جدید (از alternatives)")
+     *         @OA\Property(property="exercise_id", type="integer", example=12, description="شناسه تمرین جدید (از alternatives)"),
+     *         @OA\Property(property="set", type="integer", example=4, description="تعداد ست (اختیاری، ۱ تا ۲۰)"),
+     *         @OA\Property(property="frequency", type="integer", example=12, description="تعداد تکرار هر ست (اختیاری، ۱ تا ۱۰۰)")
      *     )),
      *     @OA\Response(response=200, description="حرکت جایگزین شد"),
      *     @OA\Response(response=404, description="آیتم یافت نشد"),
@@ -720,6 +722,7 @@ class ExerciseUsersProgramController extends Controller
         $validator = Validator::make($request->all(), [
             'exercise_id' => 'required|integer|exists:exercises,id',
             'set' => 'nullable|integer|min:1|max:20',
+            'frequency' => 'nullable|integer|min:1|max:100',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -733,6 +736,9 @@ class ExerciseUsersProgramController extends Controller
         $item->exercise_id = $request->exercise_id;
         if ($request->filled('set')) {
             $item->set = (int) $request->set;
+        }
+        if ($request->filled('frequency')) {
+            $item->frequency = (int) $request->frequency;
         }
         $item->save();
 
