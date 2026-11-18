@@ -136,6 +136,8 @@ Route::delete('/diet-meals/{id}', [DietMealController::class, 'destroy']);
 Route::get('/diet-meals/{mealId}/items', [DietMealController::class, 'itemsByMeal']);
 Route::post('/diet-meals/{id}', [DietMealController::class, 'update']);
 Route::post('/diet-meals/{id}/status', [DietMealController::class, 'updateStatus']);
+Route::post('/diet-meals/{id}/favorite', [DietMealController::class, 'addFavorite']);
+Route::delete('/diet-meals/{id}/favorite', [DietMealController::class, 'removeFavorite']);
 
 // وعده‌های ساخته‌شده توسط کاربر (تا تایید ادمین فقط برای خود کاربر نمایش داده می‌شوند)
 Route::get('/user-meals', [DietMealController::class, 'userMeals']);

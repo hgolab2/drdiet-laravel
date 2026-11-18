@@ -45,6 +45,11 @@ class DietMeal extends Model
         return $this->hasMany(DietMealCategory::class, 'meal_id');
     }
 
+    public function favorites()
+    {
+        return $this->hasMany(UserFavoriteMeal::class, 'meal_id');
+    }
+
     public function image()
     {
         return $this->belongsTo(Image::class, 'imageId');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DietItem;
 use App\Models\DietMeal;
 use App\Models\DietMealItem;
+use App\Models\UserFavoriteMeal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -153,6 +154,7 @@ class DietMealController extends Controller
      *                 @OA\Property(property="name", type="string", example="صبحانه ایرانی"),
      *                 @OA\Property(property="description", type="string", example="یک وعده سالم برای صبحانه"),
      *                 @OA\Property(property="imageUrl", type="string", example="https://example.com/images/meal1.jpg"),
+     *                 @OA\Property(property="isFavorite", type="boolean", example=true, description="وعده در علاقه‌مندی‌های کاربر است؛ وعده‌های علاقه‌مندی اول لیست می‌آیند"),
      *                 @OA\Property(property="mealTypes", type="array", @OA\Items(
      *                     @OA\Property(property="id", type="integer", example=1),
      *                     @OA\Property(property="label", type="string", example="صبحانه")
@@ -189,7 +191,8 @@ class DietMealController extends Controller
 
         $pageSize = (int)($request->pagesize ?? 20);
         $isStaff = $user->hasAnyRole(self::STAFF_ROLES);
-        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures', 'user']);
+        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures', 'user', 'image'])
+            ->withExists(['favorites as is_favorite' => fn($q) => $q->where('user_id', $user->id)]);
 
         if ($isStaff) {
             // پیش‌فرض فقط وعده‌های تایید شده؛ status=all همه وعده‌ها
@@ -238,7 +241,8 @@ class DietMealController extends Controller
             });
         }
         $totalCount = $query->count();
-        $meals = $query->orderBy('id', 'desc')->paginate($pageSize);
+        // وعده‌های علاقه‌مندی کاربر اول، بعد بقیه
+        $meals = $query->orderByDesc('is_favorite')->orderBy('id', 'desc')->paginate($pageSize);
         $meals = collect($meals->items())->map(fn($meal) => $this->mealToArray($meal, $user, $isStaff));
 
         return response()->json([
@@ -256,6 +260,7 @@ class DietMealController extends Controller
             'imageUrl' => $meal->image?->url(),
             'status' => $meal->status,
             'isMine' => $meal->user_id !== null && $meal->user_id === $user->id,
+            'isFavorite' => (bool) ($meal->is_favorite ?? false),
             'mealTypes' => $meal->mealTypes->map(function ($t) {
                 return [
                     'id' => $t->meal_type_id,
@@ -1063,5 +1068,63 @@ class DietMealController extends Controller
         }
 
         return response()->json(MealCategory::getList());
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/diet-meals/{id}/favorite",
+     *     summary="افزودن وعده به علاقه‌مندی‌های کاربر (دکمه قلب)",
+     *     tags={"DietMeal"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, description="شناسه وعده", @OA\Schema(type="integer", example=5)),
+     *     @OA\Response(response=200, description="افزوده شد", @OA\JsonContent(
+     *         @OA\Property(property="id", type="integer", example=5),
+     *         @OA\Property(property="isFavorite", type="boolean", example=true)
+     *     )),
+     *     @OA\Response(response=401, description="عدم دسترسی"),
+     *     @OA\Response(response=404, description="وعده پیدا نشد")
+     * )
+     */
+    public function addFavorite($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        }
+
+        $meal = DietMeal::find($id);
+        if (!$meal) {
+            return response()->json(['message' => 'یافت نشد.'], 404);
+        }
+
+        UserFavoriteMeal::firstOrCreate(['user_id' => $user->id, 'meal_id' => $meal->id]);
+
+        return response()->json(['id' => $meal->id, 'isFavorite' => true]);
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/diet-meals/{id}/favorite",
+     *     summary="حذف وعده از علاقه‌مندی‌های کاربر",
+     *     tags={"DietMeal"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, description="شناسه وعده", @OA\Schema(type="integer", example=5)),
+     *     @OA\Response(response=200, description="حذف شد", @OA\JsonContent(
+     *         @OA\Property(property="id", type="integer", example=5),
+     *         @OA\Property(property="isFavorite", type="boolean", example=false)
+     *     )),
+     *     @OA\Response(response=401, description="عدم دسترسی")
+     * )
+     */
+    public function removeFavorite($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
+        }
+
+        UserFavoriteMeal::where('user_id', $user->id)->where('meal_id', (int) $id)->delete();
+
+        return response()->json(['id' => (int) $id, 'isFavorite' => false]);
     }
 }
