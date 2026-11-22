@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 
 use App\Models\ExerciseProgram;
 use App\Models\ExerciseProgramItem;
+use App\Models\ExerciseUsersProgram;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -303,7 +304,42 @@ class ExerciseProgramController extends Controller
             : [];
         $existing->whereNotIn('id', $usedIds)->each->delete();
 
+        if ($request->has('days')) {
+            $this->syncActiveUserPrograms($program);
+        }
+
         return response()->json(['message' => 'برنامه با موفقیت ویرایش شد.']);
+    }
+
+    /**
+     * ست و تکرارِ پرشده‌ی آیتم‌های برنامه‌ی اصلی روی برنامه‌ی فعال (منقضی‌نشده‌ی) کاربرانِ این برنامه نوشته می‌شود.
+     * تمرینِ انتخاب‌شده‌ی کاربر عوض نمی‌شود؛ آیتمی که ست یا تکرارش در برنامه‌ی اصلی خالی است دست نمی‌خورد.
+     */
+    private function syncActiveUserPrograms(ExerciseProgram $program): void
+    {
+        $userPrograms = ExerciseUsersProgram::where('exercise_program_id', $program->id)
+            ->where('expire_at', '>=', date('Y-m-d'))
+            ->with('items.item')
+            ->get();
+
+        foreach ($userPrograms as $userProgram) {
+            foreach ($userProgram->items as $userItem) {
+                $templateItem = $userItem->templateItem();
+                if (!$templateItem || (int) $templateItem->exercise_program_id !== (int) $program->id) {
+                    continue;
+                }
+                $changes = [];
+                if ($templateItem->set && (int) $userItem->set !== (int) $templateItem->set) {
+                    $changes['set'] = $templateItem->set;
+                }
+                if ($templateItem->frequency && (int) $userItem->frequency !== (int) $templateItem->frequency) {
+                    $changes['frequency'] = $templateItem->frequency;
+                }
+                if ($changes) {
+                    $userItem->update($changes);
+                }
+            }
+        }
     }
 
     /**
