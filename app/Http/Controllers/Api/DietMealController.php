@@ -10,6 +10,7 @@ use App\Models\UserFavoriteMeal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Enums\MealType;
@@ -191,8 +192,12 @@ class DietMealController extends Controller
 
         $pageSize = (int)($request->pagesize ?? 20);
         $isStaff = $user->hasAnyRole(self::STAFF_ROLES);
-        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures', 'user', 'image'])
-            ->withExists(['favorites as is_favorite' => fn($q) => $q->where('user_id', $user->id)]);
+        $query = DietMeal::with(['items', 'mealTypes', 'foodCultures', 'user', 'image']);
+        // تا وقتی جدول علاقه‌مندی‌ها روی دیتابیس ساخته نشده، لیست بدون قلب کار کند (نه خطای 500)
+        $hasFavorites = self::favoritesTableExists();
+        if ($hasFavorites) {
+            $query->withExists(['favorites as is_favorite' => fn($q) => $q->where('user_id', $user->id)]);
+        }
 
         if ($isStaff) {
             // پیش‌فرض فقط وعده‌های تایید شده؛ status=all همه وعده‌ها
@@ -242,7 +247,10 @@ class DietMealController extends Controller
         }
         $totalCount = $query->count();
         // وعده‌های علاقه‌مندی کاربر اول، بعد بقیه
-        $meals = $query->orderByDesc('is_favorite')->orderBy('id', 'desc')->paginate($pageSize);
+        if ($hasFavorites) {
+            $query->orderByDesc('is_favorite');
+        }
+        $meals = $query->orderBy('id', 'desc')->paginate($pageSize);
         $meals = collect($meals->items())->map(fn($meal) => $this->mealToArray($meal, $user, $isStaff));
 
         return response()->json([
@@ -1097,6 +1105,10 @@ class DietMealController extends Controller
             return response()->json(['message' => 'یافت نشد.'], 404);
         }
 
+        if (!self::favoritesTableExists()) {
+            return response()->json(['message' => 'المفضلة غير متاحة حالياً.'], 503);
+        }
+
         UserFavoriteMeal::firstOrCreate(['user_id' => $user->id, 'meal_id' => $meal->id]);
 
         return response()->json(['id' => $meal->id, 'isFavorite' => true]);
@@ -1123,8 +1135,24 @@ class DietMealController extends Controller
             return response()->json(['message' => 'دسترسی غیرمجاز.'], 401);
         }
 
+        if (!self::favoritesTableExists()) {
+            return response()->json(['message' => 'المفضلة غير متاحة حالياً.'], 503);
+        }
+
         UserFavoriteMeal::where('user_id', $user->id)->where('meal_id', (int) $id)->delete();
 
         return response()->json(['id' => (int) $id, 'isFavorite' => false]);
+    }
+
+    /**
+     * جدول user_favorite_meals روی دیتابیس هست؟ (migration ممکن است هنوز روی سرور اجرا نشده باشد)
+     */
+    private static function favoritesTableExists(): bool
+    {
+        try {
+            return Schema::hasTable('user_favorite_meals');
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }
