@@ -9,6 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         // وعده‌های علاقه‌مندی کاربر (دکمه قلب در مدال استبدال)
+        // ممکن است DietMealController جدول را قبلاً روی سرور ساخته باشد
+        if (Schema::hasTable('user_favorite_meals')) {
+            return;
+        }
+
         Schema::create('user_favorite_meals', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('user_id');

@@ -1147,12 +1147,35 @@ class DietMealController extends Controller
     /**
      * جدول user_favorite_meals روی دیتابیس هست؟ (migration ممکن است هنوز روی سرور اجرا نشده باشد)
      */
+    private static ?bool $favoritesTableReady = null;
+
     private static function favoritesTableExists(): bool
     {
+        if (self::$favoritesTableReady !== null) {
+            return self::$favoritesTableReady;
+        }
+
         try {
-            return Schema::hasTable('user_favorite_meals');
+            if (! Schema::hasTable('user_favorite_meals')) {
+                // سرور migration خودکار ندارد: جدول را یک‌بار خودمان می‌سازیم (همان ساختار migration 2026_11_18_120000)
+                Schema::create('user_favorite_meals', function (\Illuminate\Database\Schema\Blueprint $table): void {
+                    $table->id();
+                    $table->unsignedBigInteger('user_id');
+                    $table->unsignedBigInteger('meal_id');
+                    $table->timestamps();
+
+                    $table->unique(['user_id', 'meal_id']);
+                    $table->index('meal_id');
+                });
+            }
+
+            return self::$favoritesTableReady = Schema::hasTable('user_favorite_meals');
         } catch (\Throwable $e) {
-            return false;
+            try {
+                return self::$favoritesTableReady = Schema::hasTable('user_favorite_meals');
+            } catch (\Throwable $e2) {
+                return false;
+            }
         }
     }
 }
