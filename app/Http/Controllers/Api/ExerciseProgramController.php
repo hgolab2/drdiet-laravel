@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ExerciseProgram;
 use App\Models\ExerciseProgramItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Enums\ExerciseLavels;
@@ -292,12 +293,13 @@ class ExerciseProgramController extends Controller
         // بروزرسانی اطلاعات اصلی برنامه
         $program->update($request->only(['gender','name', 'description', 'level_id', 'goal_id' ,'location_id',  'is_sick']));
 
-        // حذف آیتم‌های قدیمی و افزودن آیتم‌های جدید
-        $program->items()->delete();
-
-        if ($request->has('days')) {
-            $this->createItems($program, $request->days, (bool) $request->is_sick);
-        }
+        // آیتم‌های موجود به ترتیب دوباره استفاده می‌شوند (شناسه‌ها ثابت می‌مانند تا برنامه‌ی کاربرانی
+        // که قبلاً این برنامه را گرفته‌اند روز و عضله‌ی تمرین‌ها را از دست ندهد)، اضافه‌ها حذف می‌شوند.
+        $existing = $program->items()->orderBy('id')->get();
+        $used = $request->has('days')
+            ? $this->createItems($program, $request->days, (bool) $request->is_sick, $existing)
+            : 0;
+        $existing->slice($used)->each->delete();
 
         return response()->json(['message' => 'برنامه با موفقیت ویرایش شد.']);
     }
@@ -307,13 +309,15 @@ class ExerciseProgramController extends Controller
      * هر آیتم می‌تواند عدد خالی (شناسه) یا آبجکت {"exercise_id"|"muscle_id": 104, "set": 3, "frequency": 12} باشد.
      * ست و تکرار اختیاری‌اند و در صورت خالی بودن هنگام تخصیص به کاربر تصادفی تعیین می‌شوند.
      */
-    private function createItems(ExerciseProgram $program, $days, bool $isSick): void
+    private function createItems(ExerciseProgram $program, $days, bool $isSick, ?Collection $reuse = null): int
     {
+        $used = 0;
         if (!is_array($days)) {
-            return;
+            return $used;
         }
 
         $key = $isSick ? 'exercise_id' : 'muscle_id';
+        $otherKey = $isSick ? 'muscle_id' : 'exercise_id';
 
         foreach ($days as $day => $entries) {
             if (!is_array($entries)) {
@@ -330,15 +334,25 @@ class ExerciseProgramController extends Controller
                 if (!$entry) {
                     continue;
                 }
-                ExerciseProgramItem::create([
+                $attributes = [
                     'exercise_program_id' => $program->id,
                     $key => $entry,
+                    $otherKey => null,
                     'day' => (int) $day,
                     'set' => is_numeric($set) && $set > 0 ? (int) $set : null,
                     'frequency' => is_numeric($frequency) && $frequency > 0 ? (int) $frequency : null,
-                ]);
+                ];
+                $existingItem = $reuse?->get($used);
+                if ($existingItem) {
+                    $existingItem->update($attributes);
+                } else {
+                    ExerciseProgramItem::create($attributes);
+                }
+                $used++;
             }
         }
+
+        return $used;
     }
 
 

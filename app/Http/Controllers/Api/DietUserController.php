@@ -929,7 +929,7 @@ class DietUserController extends Controller
                         'set' => $item->set,
                         'name_en' => $item->exercise?->name_en,
                         'name_ar' => $item->exercise?->name_ar,
-                        'day' => $item->item?->day,
+                        'day' => $item->templateItem()?->day,
                     ];
                 });
 
@@ -1195,7 +1195,7 @@ class DietUserController extends Controller
                     'set' => $item->set,
                     'name_en' => $item->exercise?->name_en,
                     'name_ar' => $item->exercise?->name_ar,
-                    'day' => $item->item?->day,
+                    'day' => $item->templateItem()?->day,
                 ];
             });
 

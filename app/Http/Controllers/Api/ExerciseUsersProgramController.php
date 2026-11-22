@@ -119,7 +119,7 @@ class ExerciseUsersProgramController extends Controller
                     'set' => $item->set,
                     'name_en' => $item->item?->exercise?->name_en,
                     'name_ar' => $item->item?->exercise?->name_ar,
-                    'day' => $item->item?->day,
+                    'day' => $item->templateItem()?->day,
 
                 ];
             });
@@ -369,7 +369,7 @@ class ExerciseUsersProgramController extends Controller
                 'set' => $item->set,
                 'name_en' => $item->exercise?->name_en,
                 'name_ar' => $item->exercise?->name_ar,
-                'day' => $item->item?->day,
+                'day' => $item->templateItem()?->day,
 
             ];
         });
@@ -566,7 +566,7 @@ class ExerciseUsersProgramController extends Controller
                     'name_ar' => $t->name_ar,
                     'name_en' => $t->name_en
                 ]),
-                'day' => $item->item?->day,
+                'day' => $item->templateItem()?->day,
 
             ];
         });
@@ -594,7 +594,7 @@ class ExerciseUsersProgramController extends Controller
     {
         $program = $item->program;
         $base = $program?->program;
-        $muscleId = $item->item?->muscle_id;
+        $muscleId = $item->templateItem()?->muscle_id;
         $currentIds = ExerciseUsersProgramItem::where('exercise_users_program_id', $item->exercise_users_program_id)
             ->pluck('exercise_id')->all();
 
