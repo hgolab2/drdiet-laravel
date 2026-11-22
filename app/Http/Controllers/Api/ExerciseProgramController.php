@@ -139,7 +139,7 @@ class ExerciseProgramController extends Controller
         }
 
         // گروه‌بندی آیتم‌ها بر اساس روز
-        $days = $exerciseProgram->items->groupBy('day')->map(function ($items, $day) {
+        $days = $exerciseProgram->items->sortBy('id')->groupBy('day')->sortKeys()->map(function ($items, $day) {
             return $items->map(function($item) {
                 $ex = $item->exercise;
                 if (!$ex) {
@@ -295,11 +295,13 @@ class ExerciseProgramController extends Controller
 
         // آیتم‌های موجود به ترتیب دوباره استفاده می‌شوند (شناسه‌ها ثابت می‌مانند تا برنامه‌ی کاربرانی
         // که قبلاً این برنامه را گرفته‌اند روز و عضله‌ی تمرین‌ها را از دست ندهد)، اضافه‌ها حذف می‌شوند.
+        // استفاده‌ی دوباره روز به روز است تا کم و زیاد شدن تمرین یک روز، آیتم‌های روزهای دیگر را جابه‌جا نکند.
         $existing = $program->items()->orderBy('id')->get();
-        $used = $request->has('days')
-            ? $this->createItems($program, $request->days, (bool) $request->is_sick, $existing)
-            : 0;
-        $existing->slice($used)->each->delete();
+        $pools = $existing->groupBy('day')->map(fn ($items) => $items->values()->all())->all();
+        $usedIds = $request->has('days')
+            ? $this->createItems($program, $request->days, (bool) $request->is_sick, $pools)
+            : [];
+        $existing->whereNotIn('id', $usedIds)->each->delete();
 
         return response()->json(['message' => 'برنامه با موفقیت ویرایش شد.']);
     }
@@ -309,9 +311,9 @@ class ExerciseProgramController extends Controller
      * هر آیتم می‌تواند عدد خالی (شناسه) یا آبجکت {"exercise_id"|"muscle_id": 104, "set": 3, "frequency": 12} باشد.
      * ست و تکرار اختیاری‌اند و در صورت خالی بودن هنگام تخصیص به کاربر تصادفی تعیین می‌شوند.
      */
-    private function createItems(ExerciseProgram $program, $days, bool $isSick, ?Collection $reuse = null): int
+    private function createItems(ExerciseProgram $program, $days, bool $isSick, array $reuse = []): array
     {
-        $used = 0;
+        $used = [];
         if (!is_array($days)) {
             return $used;
         }
@@ -342,13 +344,13 @@ class ExerciseProgramController extends Controller
                     'set' => is_numeric($set) && $set > 0 ? (int) $set : null,
                     'frequency' => is_numeric($frequency) && $frequency > 0 ? (int) $frequency : null,
                 ];
-                $existingItem = $reuse?->get($used);
+                $existingItem = isset($reuse[(int) $day]) ? array_shift($reuse[(int) $day]) : null;
                 if ($existingItem) {
                     $existingItem->update($attributes);
                 } else {
-                    ExerciseProgramItem::create($attributes);
+                    $existingItem = ExerciseProgramItem::create($attributes);
                 }
-                $used++;
+                $used[] = $existingItem->id;
             }
         }
 
@@ -405,7 +407,7 @@ class ExerciseProgramController extends Controller
 
         $data = collect($data->items())->map(function ($exerciseProgram) {
             // گروه‌بندی آیتم‌ها بر اساس روز
-            $days = $exerciseProgram->items->groupBy('day')->map(function ($items, $day) {
+            $days = $exerciseProgram->items->sortBy('id')->groupBy('day')->sortKeys()->map(function ($items, $day) {
                 return $items->map(function($item) {
                     $ex = $item->exercise;
                     if (!$ex) {
